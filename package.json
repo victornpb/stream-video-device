@@ -1,0 +1,10 @@
+{
+  "name": "video-stream",
+  "module": "index.js",
+  "type": "module",
+  "dependencies": {
+    "@napi-rs/canvas": "^0.1.67",
+    "sharp": "^0.33.5",
+    "ws": "^8.18.3"
+  }
+}
