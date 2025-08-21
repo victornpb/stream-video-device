@@ -1,0 +1,21 @@
+{
+  "HTTP_PORT": 3001,
+  "deviceName": "USB3 Video",
+  "captureSettings": {
+    "resolution": "1920x1080",
+    "fps": 60,
+    "format": "jpg",
+    "frameSkip": 1
+  },
+  "streamSettings": {
+    "maxFramesBuffered": 10,
+    "reencode": true,
+    "format": "jpg",
+    "quality": 50,
+    "effort": 0,
+    "resolution": [
+      1280,
+      720
+    ]
+  }
+}
