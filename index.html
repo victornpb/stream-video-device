@@ -179,7 +179,7 @@
     <form id="settingsForm" method="dialog">
       <strong>Stream Settings</strong>
       <label>
-        <span>Max Buffer (frames):</span>
+        <span>Max Queue (frames):</span>
         <input type="number" id="maxFramesBuffered" name="maxFramesBuffered" min="0" max="300">
       </label>
       <br>
@@ -239,15 +239,23 @@
         </select>
       </label>
       <label>
+        <span>Frame skip:</span>
+        <select id="capFrameSkip" name="capFrameSkip">
+          <option value="0">none</option>
+          <option value="1">1/2 fps</option>
+          <option value="2">1/3 fps</option>
+          <option value="3">1/4 fps</option>
+          <option value="4">1/5 fps</option>
+          <option value="5">1/6 fps</option>
+          <option value="9">1/10 fps</option>
+        </select>
+      </label>
+      <label>
         <span>Format:</span>
         <select id="capFormat" name="capFormat">
           <option value="jpg">JPG</option>
           <option value="png">PNG</option>
         </select>
-      </label>
-      <label>
-        <span>Frame skip:</span>
-        <input type="number" id="capFrameSkip" name="capFrameSkip" min="0" max="10" step="1">
       </label>
     </form>
   </dialog>
@@ -432,7 +440,7 @@
         if (canvas.width !== imageBitmap.width || canvas.height !== imageBitmap.height) {
           canvas.width = imageBitmap.width;
           canvas.height = imageBitmap.height;
-          // ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
         ctx.drawImage(imageBitmap, 0, 0);
         imageBitmap.close();
@@ -487,7 +495,7 @@
 
 
     function toggleZoom() {
-      const MODES = ['fit-width','fit-height','stretch','original'];
+      const MODES = ['original', 'fit-width', 'fit-height', 'stretch'];
       let mode = videoCanvas.getAttribute('data-zoom');
       let currModeI = MODES.indexOf(mode) || 0;
       mode = MODES[(currModeI+1) % MODES.length]; // next mode
