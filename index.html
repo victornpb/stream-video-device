@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Video Stream</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0px;
+      padding: 0px;
+      font-family: sans-serif;
+      background: #111;
+      color: #eee;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      width: 100%;
+    }
+
+    #canvas-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    canvas {
+      display: block;
+      background-color: #000;
+      /* border: 1px solid #555; */
+      transition: width 0.3s, height 0.3s;
+      cursor: zoom-in;
+    }
+
+    #scaleModeStatus {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-size: 10pt;
+      color: #ddd;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 4px 8px;
+      border-radius: 4px;
+      pointer-events: none;
+    }
+
+    #stats {
+      position: absolute;
+      bottom: 5px;
+      left: 5px;
+      width: 200px;
+      z-index: 1;
+      font-size: 8pt;
+      text-rendering: optimizeSpeed;
+      -webkit-font-smoothing: none;
+      color: #888;
+    }
+
+    #status {
+      text-align: center;
+      font-size: 10pt;
+      margin-top: 10px;
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      z-index: 1;
+      transform: translateX(-50%);
+    }
+
+    #settingsButton {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      padding: 8px 12px;
+      background: #292828;
+      color: #fff;
+      border: none;
+      border-radius: 1px;
+      cursor: pointer;
+      z-index: 1;
+    }
+
+    #settingsDialog {
+      border: 1px solid #444;
+      background: rgba(42, 42, 42, 0.25);
+      color: #eee;
+      padding: 20px;
+      min-width: 300px;
+      max-width: 90%;
+      position: fixed;
+      top: unset;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      margin: 0;
+    }
+
+    #settingsDialog::backdrop {
+      background: rgba(0, 0, 0, 0.25);
+    }
+
+    #settingsForm {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    #settingsForm strong {
+      font-size: 1.2em;
+      margin-bottom: 5px;
+    }
+
+    #settingsForm label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    #settingsForm input[type="number"],
+    #settingsForm input[type="text"],
+    #settingsForm select {
+      background: #333;
+      border: 1px solid #555;
+      color: #eee;
+      padding: 5px;
+      width: 150px;
+      border-radius: 4px;
+    }
+
+    #settingsForm input[type="checkbox"] {
+      margin-left: 10px;
+    }
+
+    #closeButton {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 1.2em;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+    }
+
+    #closeButton:hover {
+      color: #dc3545;
+    }
+  </style>
+</head>
+
+<body>
+  <button id="settingsButton">⚙️</button>
+
+  <div id="stats">
+    <span id="fps"></span> • 
+    <span id="bitrate"></span> • 
+    <span id="avgframesize"></span>
+  </div>
+
+  <div id="canvas-container">
+    <canvas id="videoCanvas"></canvas>
+    <div id="scaleModeStatus" style="display: none;"></div>
+  </div>
+  <div id="status">(Not loaded)</div>
+
+  <dialog id="settingsDialog">
+    <button id="closeButton" type="button">✖</button>
+    <form id="settingsForm" method="dialog">
+      <strong>Stream Settings</strong>
+      <label>
+        <span>Max Buffer (frames):</span>
+        <input type="number" id="maxFramesBuffered" name="maxFramesBuffered" min="0" max="300">
+      </label>
+      <br>
+      <label>
+        <span>Re-encode frames:</span>
+        <input type="checkbox" id="reencode" name="reencode">
+      </label>
+      <label>
+        <span>Resolution:</span>
+        <select id="resolution" name="resolution">
+          <option value="0,0">Original</option>
+          <option value="1920,1080">1080p</option>
+          <option value="1280,720">720p</option>
+          <option value="960,540">540p</option>
+          <option value="853,480">480p</option>
+          <option value="640,360">360p</option>
+          <option value="426,240">240p</option>
+          <option value="256,144">144p</option>
+        </select>
+      </label>
+      <label>
+        <span>Format:</span>
+        <select id="format" name="format">
+          <option value="jpg">JPEG</option>
+          <option value="webp">WEBP</option>
+        </select>
+      </label>
+      <label>
+        <span>Quality (1-100):</span>
+        <input type="number" id="quality" name="quality" min="1" max="100" step="1">
+      </label>
+      <label>
+        <span>Effort (0-6):</span>
+        <input type="number" id="effort" name="effort" min="0" max="6" step="1">
+      </label>
+      <hr style="width: 100%;">
+      <strong>Capture Settings</strong>
+      <label>
+        <span>Resolution:</span>
+        <select id="capResolution" name="capResolution">
+          <option value="3840x2160" disabled>3840x2160</option>
+          <option value="1920x1080">1920x1080</option>
+          <option value="1280x720">1280x720</option>
+          <option value="640x480">640x480</option>
+        </select>
+      </label>
+      <label>
+        <span>FPS:</span>
+        <select id="capFps" name="capFps">
+          <option value="60">60</option>
+          <option value="50">50</option>
+          <option value="30">30</option>
+          <option value="24">24</option>
+          <option value="14">15</option>
+          <option value="10">10</option>
+          <option value="5">5</option>
+        </select>
+      </label>
+      <label>
+        <span>Format:</span>
+        <select id="capFormat" name="capFormat">
+          <option value="jpg">JPG</option>
+          <option value="png">PNG</option>
+        </select>
+      </label>
+      <label>
+        <span>Frame skip:</span>
+        <input type="number" id="capFrameSkip" name="capFrameSkip" min="0" max="10" step="1">
+      </label>
+    </form>
+  </dialog>
+
+  <script>
+    const WS_URL = (location.protocol === 'https:' ? 'wss' : 'ws') + '://' + window.location.hostname + (window.location.port ? ':' + window.location.port : '');
+    let ws = null;
+    let reconnectTimeout = null;
+
+    const statusDiv = document.querySelector('#status');
+    const videoCanvas = document.getElementById('videoCanvas');
+    const scaleModeStatus = document.getElementById('scaleModeStatus');
+    const frameCtx = videoCanvas ? videoCanvas.getContext('2d') : null;
+    const fpsDiv = document.getElementById('fps');
+    const bitrateDiv = document.getElementById('bitrate');
+    const framesizeDiv = document.getElementById('avgframesize');
+
+    // Dialog elements
+    const settingsButton = document.getElementById('settingsButton');
+    const settingsDialog = document.getElementById('settingsDialog');
+    const settingsForm = document.getElementById('settingsForm');
+    const closeButton = document.getElementById('closeButton');
+
+    if (!videoCanvas || !frameCtx) {
+      console.error("Canvas element or context not found!");
+      status("Canvas element or context not found!");
+    }
+
+    function status(...str) {
+      statusDiv.style.display = str ? '' : 'none';
+      statusDiv.innerHTML = str.join('\n').replace(/\n/g, '<br>');
+    }
+
+    // New variables for tracking stats
+    let totalBytes = 0;
+    let frameCount = 0;
+    let lastStatsTime = performance.now();
+    const statsRefreshRate = 2000; // Update stats every 2 seconds
+
+    function connectWebSocket() {
+      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+        console.log('WebSocket is already connected or connecting. Skipping new connection.');
+        return;
+      }
+
+      console.log('Connecting...');
+      status('Connecting...');
+
+      ws = new WebSocket(WS_URL);
+      ws.binaryType = 'arraybuffer';
+
+      ws.onopen = () => {
+        console.log('WebSocket connected!');
+        status('Connected!');
+        setTimeout(() => status(''), 2000);
+        // Reset stats on new connection
+        totalBytes = 0;
+        frameCount = 0;
+        lastStatsTime = performance.now();
+      };
+
+      ws.onmessage = (event) => {
+        if (event.data instanceof ArrayBuffer) {
+          frameStats(event.data.byteLength);
+          drawFrame(videoCanvas, frameCtx, event.data);
+        } else if (event.data instanceof Blob) {
+          // Need to get the byte length from the blob before drawing
+          event.data.arrayBuffer().then(buffer => {
+            frameStats(buffer.byteLength);
+            drawFrame(videoCanvas, frameCtx, event.data);
+          });
+        } else {
+          try {
+            const data = JSON.parse(event.data);
+            console.log("Received non-binary (likely JSON) message:", data);
+            status("Received non-binary (likely JSON) message:", data);
+          } catch (err) {
+            console.warn("Received unexpected non-binary, non-JSON message:", err, event.data);
+            status("Received unexpected non-binary, non-JSON message:", err, event.data);
+          }
+        }
+      };
+
+      ws.onclose = () => {
+        console.log('WebSocket connection closed.');
+        if (document.visibilityState === 'visible') {
+          console.log('Attempting to reconnect in 3 seconds...');
+          status('WebSocket disconnected. Attempting to reconnect in 3 seconds...');
+          reconnectTimeout = setTimeout(() => connectWebSocket(), 1000 * 3);
+        } else {
+          status('Connection closed. (Tab was not visible)');
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        status('WebSocket error:', error);
+      };
+    }
+
+    function disconnectWebSocket() {
+      console.log('Disconnecting...');
+      status('Disconnecting...');
+      if (ws) {
+        clearTimeout(reconnectTimeout);
+        ws.close();
+        ws = null;
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'hidden') {
+        console.log('Tab became invisible');
+        disconnectWebSocket();
+      } else {
+        console.log('Tab became visible');
+        connectWebSocket();
+      }
+    }
+
+    if (document.visibilityState === 'visible') {
+      connectWebSocket();
+    } else {
+      console.log('Tab is initially hidden, will connect when it becomes visible.');
+    }
+
+    const REFRESH_RATE = 2;
+    const fpsTick = microFps((stats) => {
+      fpsDiv.innerHTML = Math.round(stats.fps) + " fps";
+    }, REFRESH_RATE);
+
+    function frameStats(byteLength) {
+      totalBytes += byteLength;
+      frameCount++;
+      if (performance.now() - lastStatsTime >= statsRefreshRate) {
+        updateStatsDisplay();
+        lastStatsTime = performance.now();
+      }
+    }
+
+    function updateStatsDisplay() {
+      const elapsedSeconds = (performance.now() - lastStatsTime) / 1000;
+      if (elapsedSeconds > 0 && frameCount > 0) {
+        const totalBits = totalBytes * 8;
+        let bitrate = totalBits / elapsedSeconds;
+        let unit = 'bps';
+
+        if (bitrate >= 1000000000) {
+          bitrate /= 1000000000;
+          unit = 'Gbps';
+        } else if (bitrate >= 1000000) {
+          bitrate /= 1000000;
+          unit = 'Mbps';
+        } else if (bitrate >= 1000) {
+          bitrate /= 1000;
+          unit = 'Kbps';
+        }
+
+        const avgFrameSizeKB = totalBytes / frameCount / 1024;
+
+        bitrateDiv.innerHTML = `${bitrate.toFixed(1)} ${unit}`;
+        framesizeDiv.innerHTML = `${avgFrameSizeKB.toFixed(1)} KB/frame`;
+
+        totalBytes = 0;
+        frameCount = 0;
+      } else {
+        bitrateDiv.innerHTML = '';
+        framesizeDiv.innerHTML = '';
+      }
+    }
+
+    async function drawFrame(canvas, ctx, imageData) {
+      if (!canvas || !ctx || !imageData) {
+        console.warn("drawFrame: Missing canvas, context, or image data.");
+        status("drawFrame: Missing canvas, context, or image data.");
+        return;
+      }
+      try {
+        const imageBitmap = await createImageBitmap(new Blob([imageData]));
+        if (canvas.width !== imageBitmap.width || canvas.height !== imageBitmap.height) {
+          canvas.width = imageBitmap.width;
+          canvas.height = imageBitmap.height;
+          // ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+        ctx.drawImage(imageBitmap, 0, 0);
+        imageBitmap.close();
+        fpsTick();
+      } catch (err) {
+        console.error("Error creating ImageBitmap from binary data or drawing:", err);
+        status("Error creating ImageBitmap from binary data or drawing:", err);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+
+    function microFps(callback, refreshRate = 1) {
+      if (typeof callback !== 'function') throw new Error('Callback is not a function');
+      if (typeof refreshRate !== 'number' || isNaN(refreshRate) || refreshRate < 0 || refreshRate === Infinity) throw new Error('refreshRate should be a positive number! e.g. 2 (fps)');
+      let frames = -1;
+      let trigger = 0;
+      let lastTimestamp = undefined;
+      let lastFps = 0;
+      let jitter = 0;
+      const millis = (typeof performance === 'object' && 'now' in performance) ? performance.now.bind(performance) : Date.now.bind(Date);
+      return function fpsMeterTick() {
+        if (frames >= trigger) {
+          const now = millis();
+          if (lastTimestamp === undefined) lastTimestamp = now;
+          const elapsed = now - lastTimestamp;
+          if (elapsed > 0) {
+            const fps = frames > 0 ? 1000 / (elapsed / frames) : 0;
+            jitter = Math.abs(lastFps - fps);
+            if (refreshRate > 0) {
+              trigger = (trigger * 0.5) + ((fps / refreshRate) * 0.5);
+              if (trigger < 0) trigger = 0;
+            } else trigger = 0;
+
+            const info = {
+              fps: fps,
+              jitter: jitter,
+              elapsed: elapsed,
+              frames: frames,
+              trigger: trigger,
+            };
+            lastTimestamp = now;
+            lastFps = fps;
+            frames = 0;
+            callback(info);
+          } else {
+            trigger *= 2;
+          }
+        }
+        frames++;
+      };
+    }
+
+
+    function toggleZoom() {
+      const MODES = ['fit-width','fit-height','stretch','original'];
+      let mode = videoCanvas.getAttribute('data-zoom');
+      let currModeI = MODES.indexOf(mode) || 0;
+      mode = MODES[(currModeI+1) % MODES.length]; // next mode
+
+      if (mode=='fit-width') {
+        modeText = 'Fit Width';
+        videoCanvas.setAttribute('data-zoom', 'fit-width');
+        videoCanvas.style.width = '100vw';
+        videoCanvas.style.height = 'auto';
+      }
+      else if (mode=='fit-height') {
+        modeText = 'Fit Height';
+        videoCanvas.setAttribute('data-zoom', 'fit-height');
+        videoCanvas.style.width = 'auto';
+        videoCanvas.style.height = '100vh';
+      }
+      else if (mode=='stretch') {
+        modeText = 'Stretch to Fill';
+        videoCanvas.setAttribute('data-zoom', 'stretch');
+        videoCanvas.style.width = '100vw';
+        videoCanvas.style.height = '100vh';
+      }
+      else {
+        modeText = '100%';
+        videoCanvas.setAttribute('data-zoom', 'original');
+        // The canvas's intrinsic width/height attributes are used.
+        // videoCanvas.style.width = videoCanvas.width + 'px';
+        // videoCanvas.style.height = videoCanvas.height + 'px';
+        videoCanvas.style.width = '';
+        videoCanvas.style.height = '';
+      }
+
+      scaleModeStatus.style.display = '';
+      scaleModeStatus.textContent = `Zoom: ${modeText}`;
+      setTimeout(()=> scaleModeStatus.style.display = 'none', 2000);
+    }
+
+    videoCanvas.addEventListener('click', () => {
+      toggleZoom();
+    });
+
+    toggleZoom();
+
+    // Dialog and Settings Logic
+    settingsButton.addEventListener('click', () => {
+      fetchCurrentSettings();
+      settingsDialog.showModal();
+    });
+
+    closeButton.addEventListener('click', () => {
+      settingsDialog.close();
+    });
+
+    settingsForm.addEventListener('change', async (e) => {
+      const [width, height] = document.getElementById('resolution').value.split(',').map(Number);
+
+      const settings = {
+        streamSettings: {
+          maxFramesBuffered: parseInt(document.getElementById('maxFramesBuffered').value),
+          reencode: document.getElementById('reencode').checked,
+          format: document.getElementById('format').value,
+          quality: parseInt(document.getElementById('quality').value),
+          effort: parseInt(document.getElementById('effort').value),
+          resolution: [width, height],
+        },
+        captureSettings: {
+          resolution: capResolution.value,
+          fps: parseInt(capFps.value),
+          format: capFormat.value,
+          frameSkip: parseInt(capFrameSkip.value),
+        }
+      };
+
+      try {
+        const response = await fetch('/settings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(settings),
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          console.log('Settings updated successfully.');
+          updateForm(result);
+        } else {
+          console.error('Failed to update settings:', result.error);
+        }
+      } catch (err) {
+        console.error('Network or server error:', err);
+      }
+    });
+
+    async function fetchCurrentSettings() {
+      try {
+        const response = await fetch('/settings');
+        if (response.ok) {
+          const settings = await response.json();
+          updateForm(settings);
+        }
+      } catch (err) {
+        console.error('Failed to fetch current settings:', err);
+      }
+    }
+
+    function updateForm({streamSettings, captureSettings}) {
+      maxFramesBuffered.value = streamSettings.maxFramesBuffered;
+      reencode.checked = streamSettings.reencode;
+      format.value = streamSettings.format;
+      quality.value = streamSettings.quality;
+      effort.value = streamSettings.effort;
+      resolution.value = streamSettings.resolution.join(',');
+      capResolution.value = captureSettings.resolution;
+      capFps.value  = captureSettings.fps;
+      capFormat.value  = captureSettings.format;
+      capFrameSkip.value  = captureSettings.frameSkip;
+    }
+
+    fetchCurrentSettings();
+  </script>
+</body>
+
+</html>
