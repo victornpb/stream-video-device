@@ -4,6 +4,8 @@ import http from 'http';
 import sharp from 'sharp';
 import WebSocket, { WebSocketServer } from 'ws';
 
+
+
 // Read and parse configuration files synchronously
 const configVideo = JSON.parse(fs.readFileSync('./config_video.json', 'utf8'));
 const {
@@ -17,6 +19,7 @@ let frameSkipCounter = 0; // used for skipping frames
 let ffmpegProcess; // To hold the ffmpeg child process for the continuous stream
 let frameBuffer = Buffer.alloc(0); // Buffer to accumulate incomplete frame data
 let latestFullFrame; // hold the latest complete frame
+let frameFormat;
 
 // PNG signature and IEND chunk for frame detection
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
@@ -200,8 +203,10 @@ async function startContinuousFrameCapture(deviceName) {
       frameSkipCounter++;
       const completeFrame = frameBuffer.slice(startIndex, fullImageEndIndex);
 
-      // Process the complete frame
+      // Store the complete frame
+      frameFormat = imageFormat;
       latestFullFrame = completeFrame;
+
       if (frameSkipCounter % (captureSettings.frameSkip + 1) === 0) {
         // console.log(`Frame ${frameCount} ${imageFormat}: ${formatBytes(completeFrame.length)}`);
         broadcastFrameToWebSockets(completeFrame, imageFormat);
@@ -271,6 +276,15 @@ const server = http.createServer(async (req, res) => {
     const html = await fs.promises.readFile('index.html', 'utf8');
     res.writeHead(200, { 'Content-Type': 'text/html' });
     res.end(html);
+  }
+  else if (req.url === '/frame') {
+    if (latestFullFrame) {
+      res.writeHead(200, { 'Content-Type': `image/${frameFormat}` }); // serve image
+      res.end(latestFullFrame);
+    } else {
+      res.writeHead(404);
+      res.end('No full frame available.');
+    }
   }
   // Endpoint /settings
   else if (req.url === '/settings' && req.method === 'POST') {
