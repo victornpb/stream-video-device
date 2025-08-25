@@ -41,18 +41,6 @@
       cursor: zoom-in;
     }
 
-    #scaleModeStatus {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      font-size: 10pt;
-      color: #ddd;
-      background: rgba(0, 0, 0, 0.5);
-      padding: 4px 8px;
-      border-radius: 4px;
-      pointer-events: none;
-    }
-
     #stats {
       position: absolute;
       bottom: 5px;
@@ -91,7 +79,7 @@
 
     #settingsDialog {
       border: 1px solid #444;
-      background: rgba(42, 42, 42, 0.25);
+      background: rgba(8, 8, 8, 0.6);
       color: #eee;
       padding: 20px;
       min-width: 300px;
@@ -105,7 +93,7 @@
     }
 
     #settingsDialog::backdrop {
-      background: rgba(0, 0, 0, 0.25);
+      /* background: rgba(0, 0, 0, 0.25); */
     }
 
     #settingsForm {
@@ -147,20 +135,21 @@
       background: transparent;
       border: none;
       color: #fff;
-      font-size: 1.2em;
+      font-size: 22px;
       cursor: pointer;
-      padding: 0;
+      padding: 8px;
       line-height: 1;
+      background: #dc354533;
     }
 
     #closeButton:hover {
-      color: #dc3545;
+      background: #dc3545;
     }
   </style>
 </head>
 
 <body>
-  <button id="settingsButton">⚙️</button>
+  <button id="settingsButton" title="Settings">⚙️</button>
 
   <div id="stats">
     <span id="fps"></span> • 
@@ -170,7 +159,6 @@
 
   <div id="canvas-container">
     <canvas id="videoCanvas"></canvas>
-    <div id="scaleModeStatus" style="display: none;"></div>
   </div>
   <div id="status">(Not loaded)</div>
 
@@ -191,13 +179,13 @@
         <span>Resolution:</span>
         <select id="resolution" name="resolution">
           <option value="0,0">Original</option>
-          <option value="1920,1080">1080p</option>
-          <option value="1280,720">720p</option>
-          <option value="960,540">540p</option>
-          <option value="853,480">480p</option>
-          <option value="640,360">360p</option>
-          <option value="426,240">240p</option>
-          <option value="256,144">144p</option>
+          <option value="1920,1080">1920x1080 (1080p)</option>
+          <option value="1280,720">1280x720 (720p)</option>
+          <option value="960,540">960x540 (540p)</option>
+          <option value="853,480">853x480 (480p)</option>
+          <option value="640,360">640x360 (360p)</option>
+          <option value="426,240">426x240 (240p)</option>
+          <option value="256,144">256x144 (144p)</option>
         </select>
       </label>
       <label>
@@ -284,9 +272,16 @@
       status("Canvas element or context not found!");
     }
 
-    function status(...str) {
+    let statusTimeout;
+    function status(str, timeout=5) {
+      if (statusTimeout) clearTimeout(statusTimeout);
       statusDiv.style.display = str ? '' : 'none';
-      statusDiv.innerHTML = str.join('\n').replace(/\n/g, '<br>');
+      statusDiv.innerHTML = str.replace(/\n/g, '<br>');
+      statusTimeout = setTimeout(() => {
+        statusDiv.style.display = 'none';
+        statusDiv.innerHTML = '';
+        statusTimeout = null;
+      }, timeout * 1000);
     }
 
     // New variables for tracking stats
@@ -302,15 +297,14 @@
       }
 
       console.log('Connecting...');
-      status('Connecting...');
+      status('Connecting...', 30);
 
       ws = new WebSocket(WS_URL);
       ws.binaryType = 'arraybuffer';
 
       ws.onopen = () => {
         console.log('WebSocket connected!');
-        status('Connected!');
-        setTimeout(() => status(''), 2000);
+        status('Connected!', 2);
         // Reset stats on new connection
         totalBytes = 0;
         frameCount = 0;
@@ -331,10 +325,10 @@
           try {
             const data = JSON.parse(event.data);
             console.log("Received non-binary (likely JSON) message:", data);
-            status("Received non-binary (likely JSON) message:", data);
+            status("Received non-binary (likely JSON) message:\n"+ data, 30);
           } catch (err) {
             console.warn("Received unexpected non-binary, non-JSON message:", err, event.data);
-            status("Received unexpected non-binary, non-JSON message:", err, event.data);
+            status("Received unexpected non-binary, non-JSON message:\n" + err + "\n" + event.data, 30);
           }
         }
       };
@@ -343,16 +337,16 @@
         console.log('WebSocket connection closed.');
         if (document.visibilityState === 'visible') {
           console.log('Attempting to reconnect in 3 seconds...');
-          status('WebSocket disconnected. Attempting to reconnect in 3 seconds...');
+          status('WebSocket disconnected. Attempting to reconnect in 3 seconds...', 30);
           reconnectTimeout = setTimeout(() => connectWebSocket(), 1000 * 3);
         } else {
-          status('Connection closed. (Tab was not visible)');
+          status('Connection closed. (Tab was not visible)', 30);
         }
       };
 
       ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        status('WebSocket error:', error);
+        console.error('WebSocket error: ', error);
+        status('WebSocket error:\n' + error, 30);
       };
     }
 
@@ -366,8 +360,38 @@
       }
     }
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    async function drawFrame(canvas, ctx, imageData) {
+      if (!canvas || !ctx || !imageData) {
+        console.warn("drawFrame: Missing canvas, context, or image data.");
+        status("drawFrame: Missing canvas, context, or image data.", 30);
+        return;
+      }
+      try {
+        const imageBitmap = await createImageBitmap(new Blob([imageData]));
+        if (canvas.width !== imageBitmap.width || canvas.height !== imageBitmap.height) {
+          canvas.width = imageBitmap.width;
+          canvas.height = imageBitmap.height;
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+        ctx.drawImage(imageBitmap, 0, 0);
+        imageBitmap.close();
+        fpsTick();
+      } catch (err) {
+        console.error("Error creating ImageBitmap from binary data or drawing:", err);
+        status("Error creating ImageBitmap from binary data or drawing:\n" + err, 30);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    }
 
+
+    // save bandwidth by pausing the connection when the tab is not visible
+    if (document.visibilityState === 'visible') {
+      connectWebSocket();
+    } else {
+      console.log('Tab is initially hidden, will connect when it becomes visible.');
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     function handleVisibilityChange() {
       if (document.visibilityState === 'hidden') {
         console.log('Tab became invisible');
@@ -378,11 +402,6 @@
       }
     }
 
-    if (document.visibilityState === 'visible') {
-      connectWebSocket();
-    } else {
-      console.log('Tab is initially hidden, will connect when it becomes visible.');
-    }
 
     const REFRESH_RATE = 2;
     const fpsTick = microFps((stats) => {
@@ -429,29 +448,6 @@
       }
     }
 
-    async function drawFrame(canvas, ctx, imageData) {
-      if (!canvas || !ctx || !imageData) {
-        console.warn("drawFrame: Missing canvas, context, or image data.");
-        status("drawFrame: Missing canvas, context, or image data.");
-        return;
-      }
-      try {
-        const imageBitmap = await createImageBitmap(new Blob([imageData]));
-        if (canvas.width !== imageBitmap.width || canvas.height !== imageBitmap.height) {
-          canvas.width = imageBitmap.width;
-          canvas.height = imageBitmap.height;
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }
-        ctx.drawImage(imageBitmap, 0, 0);
-        imageBitmap.close();
-        fpsTick();
-      } catch (err) {
-        console.error("Error creating ImageBitmap from binary data or drawing:", err);
-        status("Error creating ImageBitmap from binary data or drawing:", err);
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      }
-    }
-
     function microFps(callback, refreshRate = 1) {
       if (typeof callback !== 'function') throw new Error('Callback is not a function');
       if (typeof refreshRate !== 'number' || isNaN(refreshRate) || refreshRate < 0 || refreshRate === Infinity) throw new Error('refreshRate should be a positive number! e.g. 2 (fps)');
@@ -494,12 +490,11 @@
     }
 
 
-    function toggleZoom() {
+    function changeZoomMode() {
       const MODES = ['original', 'fit-width', 'fit-height', 'stretch'];
       let mode = videoCanvas.getAttribute('data-zoom');
       let currModeI = MODES.indexOf(mode) || 0;
       mode = MODES[(currModeI+1) % MODES.length]; // next mode
-
       if (mode=='fit-width') {
         modeText = 'Fit Width';
         videoCanvas.setAttribute('data-zoom', 'fit-width');
@@ -527,22 +522,20 @@
         videoCanvas.style.width = '';
         videoCanvas.style.height = '';
       }
-
-      scaleModeStatus.style.display = '';
-      scaleModeStatus.textContent = `Zoom: ${modeText}`;
-      setTimeout(()=> scaleModeStatus.style.display = 'none', 2000);
+      status(`Zoom: ${modeText}`, 2);
     }
 
     videoCanvas.addEventListener('click', () => {
-      toggleZoom();
+      changeZoomMode();
     });
 
-    toggleZoom();
+    changeZoomMode();
+
 
     // Dialog and Settings Logic
     settingsButton.addEventListener('click', () => {
       fetchCurrentSettings();
-      settingsDialog.showModal();
+      settingsDialog.open ? settingsDialog.close() : settingsDialog.show();
     });
 
     closeButton.addEventListener('click', () => {
@@ -581,12 +574,15 @@
         const result = await response.json();
         if (result.success) {
           console.log('Settings updated successfully.');
+          status('Settings updated successfully.', 2);
           updateForm(result);
         } else {
           console.error('Failed to update settings:', result.error);
+          status('Failed to update settings:\n'+ result.error, 30);
         }
       } catch (err) {
         console.error('Network or server error:', err);
+        status('Network or server error:\n'+ err, 30);
       }
     });
 
@@ -596,9 +592,11 @@
         if (response.ok) {
           const settings = await response.json();
           updateForm(settings);
+          status('Current settings loaded.', 2);
         }
       } catch (err) {
         console.error('Failed to fetch current settings:', err);
+        status('Failed to fetch current settings:\n'+ err, 30);
       }
     }
 

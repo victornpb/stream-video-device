@@ -5,17 +5,17 @@
     "resolution": "1920x1080",
     "fps": 60,
     "format": "jpg",
-    "frameSkip": 4
+    "frameSkip": 1
   },
   "streamSettings": {
     "maxFramesBuffered": 1,
     "reencode": true,
-    "format": "webp",
-    "quality": 10,
+    "format": "jpg",
+    "quality": 25,
     "effort": 0,
     "resolution": [
-      1280,
-      720
+      0,
+      0
     ]
   }
 }
