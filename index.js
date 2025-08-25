@@ -87,6 +87,11 @@ async function getDeviceSpecifier(deviceName) {
   }
 }
 
+function sanitize(str, re) {
+  if (re.test(str)) return str;
+  return '';
+}
+
 
 async function startContinuousFrameCapture(deviceName) {
   if (ffmpegProcess) {
@@ -99,7 +104,11 @@ async function startContinuousFrameCapture(deviceName) {
   }
 
   const deviceSpecifier = await getDeviceSpecifier(deviceName);
-  
+
+  // sanitize
+  captureSettings.resolution = sanitize(captureSettings.resolution, /^(\d{1,4})x(\d{1,4})$/);
+  captureSettings.fps = sanitize(captureSettings.fps, /^\d{1,3}$/);
+
   const os = process.platform;
   const ffmpegArgs = [];
   if (captureSettings.format === 'jpg') { // lossy capture
