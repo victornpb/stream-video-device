@@ -95,22 +95,35 @@
     #settingsDialog::backdrop {
       /* background: rgba(0, 0, 0, 0.25); */
     }
+    
+    #settingsDialog .title {
+      text-align: center;
+      margin-bottom: 15px;
+      font-weight: bold;
+    }
+    
+    #settingsDialog hr {
+      width: 100%;
+      opacity: 0.2;
+    }
 
     #settingsForm {
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      -gap: 10px;
     }
 
-    #settingsForm strong {
+    #settingsForm summary {
       font-size: 1.2em;
       margin-bottom: 5px;
+      cursor: pointer;
     }
 
     #settingsForm label {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      margin-bottom: 0.2em;
     }
 
     #settingsForm input[type="number"],
@@ -164,86 +177,93 @@
 
   <dialog id="settingsDialog">
     <button id="closeButton" type="button">✖</button>
+    <div class="title">Settings</div>
     <form id="settingsForm" method="dialog">
-      <strong>Stream Settings</strong>
+      <details open>
+        <summary>Video compression</summary>
+        <label>
+          <span>Enable compression</span>
+          <input type="checkbox" id="reencode" name="reencode">
+        </label>
+        <label>
+          <span>Resolution:</span>
+          <select id="resolution" name="resolution">
+            <option value="0,0">Original</option>
+            <option value="1920,1080">1920x1080 (1080p)</option>
+            <option value="1280,720">1280x720 (720p)</option>
+            <option value="960,540">960x540 (540p)</option>
+            <option value="853,480">853x480 (480p)</option>
+            <option value="640,360">640x360 (360p)</option>
+            <option value="426,240">426x240 (240p)</option>
+            <option value="256,144">256x144 (144p)</option>
+          </select>
+        </label>
+        <label>
+          <span>Format:</span>
+          <select id="format" name="format">
+            <option value="jpg">JPEG</option>
+            <option value="webp">WEBP</option>
+          </select>
+        </label>
+        <label>
+          <span>Quality (1-100):</span>
+          <input type="number" id="quality" name="quality" min="1" max="100" step="1">
+        </label>
+        <label>
+          <span>Effort (0-6):</span>
+          <input type="number" id="effort" name="effort" min="0" max="6" step="1">
+        </label>
+      </details>
+      <hr style="width: 100%;">
+      <details>
+        <summary>Capture Settings</summary>
+        <label>
+          <span>Resolution:</span>
+          <select id="capResolution" name="capResolution">
+            <option value="3840x2160" disabled>3840x2160</option>
+            <option value="1920x1080">1920x1080</option>
+            <option value="1280x720">1280x720</option>
+            <option value="720x480">720x480</option>
+            <option value="640x480">640x480</option>
+          </select>
+        </label>
+        <label>
+          <span>FPS:</span>
+          <select id="capFps" name="capFps">
+            <option value="60">60</option>
+            <option value="50">50</option>
+            <option value="30">30</option>
+            <option value="24">24</option>
+            <option value="20">20</option>
+            <option value="14">15</option>
+            <option value="10">10</option>
+            <option value="5">5</option>
+          </select>
+        </label>
+        <label>
+          <span>Frame skip:</span>
+          <select id="capFrameSkip" name="capFrameSkip">
+            <option value="0">none</option>
+            <option value="1">1/2 fps</option>
+            <option value="2">1/3 fps</option>
+            <option value="3">1/4 fps</option>
+            <option value="4">1/5 fps</option>
+            <option value="5">1/6 fps</option>
+            <option value="9">1/10 fps</option>
+          </select>
+        </label>
+        <label>
+          <span>Format:</span>
+          <select id="capFormat" name="capFormat">
+            <option value="jpg">Lossy (JPG)</option>
+            <option value="png">Lossless (PNG)</option>
+          </select>
+        </label>
+      </details>
+      <hr style="width: 100%;">
       <label>
         <span>Max Queue (frames):</span>
         <input type="number" id="maxFramesBuffered" name="maxFramesBuffered" min="0" max="300">
-      </label>
-      <br>
-      <label>
-        <span>Re-encode frames:</span>
-        <input type="checkbox" id="reencode" name="reencode">
-      </label>
-      <label>
-        <span>Resolution:</span>
-        <select id="resolution" name="resolution">
-          <option value="0,0">Original</option>
-          <option value="1920,1080">1920x1080 (1080p)</option>
-          <option value="1280,720">1280x720 (720p)</option>
-          <option value="960,540">960x540 (540p)</option>
-          <option value="853,480">853x480 (480p)</option>
-          <option value="640,360">640x360 (360p)</option>
-          <option value="426,240">426x240 (240p)</option>
-          <option value="256,144">256x144 (144p)</option>
-        </select>
-      </label>
-      <label>
-        <span>Format:</span>
-        <select id="format" name="format">
-          <option value="jpg">JPEG</option>
-          <option value="webp">WEBP</option>
-        </select>
-      </label>
-      <label>
-        <span>Quality (1-100):</span>
-        <input type="number" id="quality" name="quality" min="1" max="100" step="1">
-      </label>
-      <label>
-        <span>Effort (0-6):</span>
-        <input type="number" id="effort" name="effort" min="0" max="6" step="1">
-      </label>
-      <hr style="width: 100%;">
-      <strong>Capture Settings</strong>
-      <label>
-        <span>Resolution:</span>
-        <select id="capResolution" name="capResolution">
-          <option value="3840x2160" disabled>3840x2160</option>
-          <option value="1920x1080">1920x1080</option>
-          <option value="1280x720">1280x720</option>
-          <option value="640x480">640x480</option>
-        </select>
-      </label>
-      <label>
-        <span>FPS:</span>
-        <select id="capFps" name="capFps">
-          <option value="60">60</option>
-          <option value="50">50</option>
-          <option value="30">30</option>
-          <option value="24">24</option>
-          <option value="14">15</option>
-          <option value="10">10</option>
-          <option value="5">5</option>
-        </select>
-      </label>
-      <label>
-        <span>Frame skip:</span>
-        <select id="capFrameSkip" name="capFrameSkip">
-          <option value="0">none</option>
-          <option value="1">1/2 fps</option>
-          <option value="2">1/3 fps</option>
-          <option value="3">1/4 fps</option>
-          <option value="4">1/5 fps</option>
-          <option value="5">1/6 fps</option>
-          <option value="9">1/10 fps</option>
-        </select>
-      </label>
-      <label>
-        <span>Format:</span>
-        <select id="capFormat" name="capFormat">
-          <option value="jpg">JPG</option>
-          <option value="png">PNG</option>
-        </select>
       </label>
     </form>
   </dialog>
