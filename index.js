@@ -5,7 +5,6 @@ import sharp from 'sharp';
 import WebSocket, { WebSocketServer } from 'ws';
 
 
-
 // Read and parse configuration files synchronously
 const configVideo = JSON.parse(fs.readFileSync('./config_video.json', 'utf8'));
 const {
@@ -30,11 +29,19 @@ const JPEG_END = Buffer.from([0xFF, 0xD9]);
 
 
 async function main() {
-  // sharp.concurrency(12);
-  sharp.simd(true);
+  console.log('-'.repeat(80));
+  console.log('Capture Card Video Streamer');
+  console.log('-'.repeat(80));
 
-  console.log(timestamp(), 'Starting continuous frame capture...');
+  sharp.concurrency(4);
+  sharp.simd(true);
+  
+  console.log('Starting Video Capture...');
   await startContinuousFrameCapture(deviceName);
+  
+  server.listen(HTTP_PORT, async () => {
+    console.log(`\nServing HTTP and WebSocket on port ${HTTP_PORT}...\n`);
+  });
 }
 
 async function getDeviceSpecifier(deviceName) {
@@ -54,14 +61,12 @@ async function getDeviceSpecifier(deviceName) {
         while ((match = regex.exec(stderr)) !== null) {
           videoDevices.push(match[1]);
         }
-        console.error('Video devices:', videoDevices);
         const found = videoDevices.find(d => d.toLowerCase() === deviceName.toLowerCase());
         if (found) {
-          console.error('Device found:', found);
           resolve(`video=${found}`);
         } else {
-          console.error('Available video devices:', videoDevices);
-          reject(new Error(`Device "${deviceName}" not found among: ${videoDevices.join(', ')}`));
+          console.error(`  Device "${deviceName}" not found!`, 'Available video devices:', videoDevices);
+          resolve(null);
         }
       });
     });
@@ -79,8 +84,8 @@ async function getDeviceSpecifier(deviceName) {
         if (match) {
           resolve(match[1]);
         } else {
-          console.error('Device list output:\n', stderr);
-          reject(new Error(`Device "${deviceName}" not found`));
+          console.error(`  Device "${deviceName}" not found!`, 'List devices output:\n', stderr);
+          resolve(null);
         }
       });
     });
@@ -94,8 +99,9 @@ function sanitize(str, re) {
 
 
 async function startContinuousFrameCapture(deviceName) {
+  console.log(timestamp(), 'Starting continuous frame capture...');
   if (ffmpegProcess) {
-    console.warn('FFmpeg process already running. Terminating existing process.');
+    console.warn('  FFmpeg process already running. Terminating existing process.');
     ffmpegProcess.removeAllListeners('error');
     ffmpegProcess.removeAllListeners('close');
     ffmpegProcess.kill('SIGKILL'); // Force kill if already running
@@ -103,15 +109,22 @@ async function startContinuousFrameCapture(deviceName) {
     frameBuffer = Buffer.alloc(0); // Clear buffer on restart
   }
 
-  const deviceSpecifier = await getDeviceSpecifier(deviceName);
+  console.log('  Looking for video device...', deviceName);
+  let deviceSpecifier;
+  while (true) {
+    deviceSpecifier = await getDeviceSpecifier(deviceName);
+    if (deviceSpecifier) break;
+    await delay(3000); // retry
+  }
+  console.log('  Selected device:', deviceSpecifier);
 
-  // sanitize
+  // sanitize input
   captureSettings.resolution = sanitize(captureSettings.resolution, /^(\d{1,4})x(\d{1,4})$/);
   captureSettings.fps = sanitize(captureSettings.fps, /^\d{1,3}$/);
 
   const os = process.platform;
   const ffmpegArgs = [];
-  if (captureSettings.format === 'jpg') { // lossy capture
+  if (captureSettings.codec === 'mjpeg') { // lossy capture
     ffmpegArgs.push(
       '-f', os === 'win32' ? 'dshow' : os === 'darwin' ? 'avfoundation' : 'v4l2',
       '-rtbufsize', '100M',
@@ -122,12 +135,12 @@ async function startContinuousFrameCapture(deviceName) {
       '-pix_fmt', 'yuyv422', // yuyv422 yuv420p rgb24 rgb565
       '-f', 'image2pipe',
       '-vcodec', 'mjpeg',
-      '-q:v', '1',         // JPEG quality (2-31, lower is better quality)
-      '-qmin', '1',
+      '-q:v', '1', // JPEG quality (2-31, lower is better quality)
+      '-qmin', '1', // Set minimum quality to 1 for "uncompressed" jpeg
       '-'
     );
   }
-  else if (captureSettings.format === 'png') { // lossless capture
+  else if (captureSettings.codec === 'png') { // lossless capture
     ffmpegArgs.push(
       '-f', os === 'win32' ? 'dshow' : os === 'darwin' ? 'avfoundation' : 'v4l2',
       '-rtbufsize', '100M',
@@ -142,9 +155,9 @@ async function startContinuousFrameCapture(deviceName) {
       '-'
     );
   }
-  else throw 'Invalid format';
+  else throw new Error(`Invalid Codec "${captureSettings.codec}"! (Allowed: mjpeg, png)`);
 
-  console.log(`Starting FFmpeg with args: ${ffmpegArgs.join(' ')}`);
+  console.log(`  Starting FFmpeg with args: ${ffmpegArgs.join(' ')}`);
   ffmpegProcess = spawn('ffmpeg', ffmpegArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
 
   let lastLog;
@@ -228,53 +241,24 @@ async function startContinuousFrameCapture(deviceName) {
   });
 
   ffmpegProcess.on('close', code => {
-    console.error(`FFmpeg process exited with code ${code}`, lastLog.toString());
+    console.error(timestamp(), `FFmpeg process exited with code ${code}!\n`, lastLog.toString());
     ffmpegProcess = null;
     frameBuffer = Buffer.alloc(0); // Clear buffer on process exit
-    // Re-spawn logic (uncomment if needed)
-    if (code !== 0) {
-      console.log('Attempting to restart FFmpeg process...');
-      setTimeout(() => startContinuousFrameCapture(deviceName), 5000);
-    }
+    // Re-spawn
+    //if (code !== 0) {
+      console.log('  Attempting to restart FFmpeg process...');
+      setTimeout(() => startContinuousFrameCapture(deviceName), 3000);
+    //}
   });
 
   ffmpegProcess.on('error', err => {
-    console.error(`Failed to start FFmpeg process: ${err.message}`);
+    console.error(`  Failed to start FFmpeg process: ${err.message}`);
     ffmpegProcess = null;
     frameBuffer = Buffer.alloc(0); // Clear buffer on error
   });
 }
 
-function timestamp() {
-  const londonTime = new Date().toLocaleString('en-GB', { timeZone: 'Europe/London', hour12: true });
-  return `[${londonTime}]`;
-}
 
-function hms(ms, fixed = false) {
-  const totalSeconds = Math.floor(ms / 1000),
-    seconds = totalSeconds % 60,
-    totalMinutes = Math.floor(totalSeconds / 60),
-    minutes = totalMinutes % 60,
-    hours = Math.floor(totalMinutes / 60);
-  if (fixed) {
-    const pad = n => String(n).padStart(2, '0');
-    return `${pad(hours)}h${pad(minutes)}m${pad(seconds)}s`;
-  }
-  return (hours ? hours + 'h' : '') + ((minutes || hours) ? minutes + 'm' : '') + seconds + 's';
-}
-
-function formatBytes(bytes) {
-  const units = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB'];
-  let i = 0;
-  while (bytes >= 1024 && i < units.length - 1) {
-    bytes = bytes / 1024;
-    i++;
-  }
-  return bytes.toFixed(2) + ' ' + units[i];
-}
-
-// Start the main loop
-main();
 
 // --- HTTP Server ---
 const server = http.createServer(async (req, res) => {
@@ -320,7 +304,7 @@ const server = http.createServer(async (req, res) => {
 
         // Changing these require ffmpeg restart
         if (oldCaptureSettings.resolution !== captureSettings.resolution ||
-          oldCaptureSettings.format !== captureSettings.format ||
+          oldCaptureSettings.codec !== captureSettings.codec ||
           oldCaptureSettings.fps !== captureSettings.fps) {
             console.log('Restarting capture...');
             await startContinuousFrameCapture(deviceName);
@@ -345,25 +329,55 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(HTTP_PORT, () => {
-  console.log(`HTTP server listening on port ${HTTP_PORT}`);
-});
 
 // --- WebSocket Server ---
 const wss = new WebSocketServer({ server });
 const connectedClients = new Set(); // To keep track of connected clients
+const viewerInfoMap = new Map();    // ws -> info
 
-wss.on('connection', ws => {
+wss.on('connection', (ws, req) => {
   connectedClients.add(ws);
-  console.log(timestamp(), 'WebSocket client connected!', connectedClients.size);
+
+  const forwardedFor = (req.headers['x-forwarded-for'] || '').toString().split(',')[0].trim();
+  const ip = forwardedFor || req.socket.remoteAddress || '';
+  const ua = req.headers['user-agent'] || '';
+  const referer = req.headers['referer'] || '';
+  const acceptLanguage = req.headers['accept-language'] || '';
+
+  const viewerInfo = {
+    ip,
+    userAgent: ua,
+    path: req.url || '/',
+    headers: {
+      'referer': referer,
+      'accept-language': acceptLanguage,
+      ...req.headers, // might contain sensitive data like tokens
+    },
+    connectedAt: new Date(),
+  };
+
+  viewerInfoMap.set(ws, viewerInfo);
+
+  console.log(dedent(`
+    ${timestamp()} Client connected! IP: ${ip}
+      ${ua}
+      Viewers: ${connectedClients.size}`));
+
+    broadcastViewerStats();
 
   ws.on('close', () => {
     connectedClients.delete(ws);
-    console.log(timestamp(), 'WebSocket client disconnected!', connectedClients.size);
+    viewerInfoMap.delete(ws);
+    console.log(dedent(`
+      ${timestamp()} Client disconnected! IP: ${ip}
+        ${ua}
+        Viewers: ${connectedClients.size}`));
+    
+    broadcastViewerStats();
   });
 
   ws.on('error', error => {
-    console.error(timestamp(), 'WebSocket error:', error);
+    console.error(timestamp(), 'WebSocket error:', error, viewerInfo);
   });
 });
 
@@ -408,3 +422,74 @@ function broadcastMetadata(data) {
     }
   }
 }
+
+function broadcastViewerStats() {
+  const viewers = [];
+  for (const [ws, info] of viewerInfoMap.entries()) {
+    viewers.push({
+      ip: info.ip,
+      device: info.userAgent,
+      connectedAt: info.connectedAt,
+      path: info.path,
+      headers: {
+        ...info.headers,
+        'user-agent': undefined,
+      },
+    });
+  }
+  broadcastMetadata({
+    type: 'viewerStats',
+    count: viewers.length,
+    viewers,
+  });
+}
+
+
+// ---- Utils ----
+
+/**
+ * Removes the indentation of multiline strings
+ * @param  {string} str A template literal string
+ * @return {string} A string without the indentation
+ */
+function dedent(str) {
+    str = str.replace(/^[ \t]*\r?\n/, ''); // remove leading blank line
+    var indent = /^[ \t]+/m.exec(str); // detected indent
+    if (indent) str = str.replace(new RegExp('^' + indent[0], 'gm'), ''); // remove indent
+    return str.replace(/(\r?\n)[ \t]+$/, '$1'); // remove trailling blank line
+}
+
+function timestamp() {
+  const londonTime = new Date().toLocaleString('en-GB', { timeZone: 'Europe/London', hour12: true });
+  return `[${londonTime}]`;
+}
+
+function hms(ms, fixed = false) {
+  const totalSeconds = Math.floor(ms / 1000),
+    seconds = totalSeconds % 60,
+    totalMinutes = Math.floor(totalSeconds / 60),
+    minutes = totalMinutes % 60,
+    hours = Math.floor(totalMinutes / 60);
+  if (fixed) {
+    const pad = n => String(n).padStart(2, '0');
+    return `${pad(hours)}h${pad(minutes)}m${pad(seconds)}s`;
+  }
+  return (hours ? hours + 'h' : '') + ((minutes || hours) ? minutes + 'm' : '') + seconds + 's';
+}
+
+function formatBytes(bytes) {
+  const units = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB'];
+  let i = 0;
+  while (bytes >= 1024 && i < units.length - 1) {
+    bytes = bytes / 1024;
+    i++;
+  }
+  return bytes.toFixed(2) + ' ' + units[i];
+}
+
+function delay(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+
+main();

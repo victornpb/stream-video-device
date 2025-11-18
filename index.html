@@ -67,6 +67,19 @@
     #settingsButton {
       position: absolute;
       bottom: 10px;
+      right: 50px;
+      padding: 8px 12px;
+      background: #292828;
+      color: #fff;
+      border: none;
+      border-radius: 1px;
+      cursor: pointer;
+      z-index: 1;
+    }
+
+    #fullscreenButton {
+      position: absolute;
+      bottom: 10px;
       right: 10px;
       padding: 8px 12px;
       background: #292828;
@@ -75,6 +88,28 @@
       border-radius: 1px;
       cursor: pointer;
       z-index: 1;
+    }
+
+    #viewerButton {
+      position: absolute;
+      bottom: 10px;
+      right: 90px;
+      padding: 8px 12px;
+      background: #292828;
+      color: #fff;
+      border: none;
+      border-radius: 1px;
+      cursor: pointer;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+    }
+
+    #viewerButton span {
+      min-width: 1.5em;
+      text-align: right;
     }
 
     #settingsDialog {
@@ -158,11 +193,76 @@
     #closeButton:hover {
       background: #dc3545;
     }
+
+    #viewersDialog {
+      border: 1px solid #444;
+      background: rgba(8, 8, 8, 0.9);
+      color: #eee;
+      padding: 20px;
+      min-width: 320px;
+      max-width: 90%;
+      max-height: 80vh;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      margin: 0;
+      overflow: auto;
+    }
+
+    #viewersDialog .title {
+      text-align: center;
+      margin-bottom: 15px;
+      font-weight: bold;
+    }
+
+    #viewersCloseButton {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 22px;
+      cursor: pointer;
+      padding: 8px;
+      line-height: 1;
+      background: #dc354533;
+    }
+
+    #viewersCloseButton:hover {
+      background: #dc3545;
+    }
+
+    #viewersContent ul {
+      list-style: none;
+      padding-left: 0;
+      margin: 0;
+    }
+
+    #viewersContent li {
+      margin-bottom: 8px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #333;
+      font-size: 11px;
+    }
+
+    #viewersContent code {
+      font-size: 10px;
+      background: #222;
+      padding: 4px 6px;
+      border-radius: 3px;
+      display: block;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
   </style>
 </head>
 
 <body>
+  <button id="viewerButton" title="Viewers">👁 <span id="viewerCount">0</span></button>
   <button id="settingsButton" title="Settings">⚙️</button>
+  <button id="fullscreenButton" title="Fullscreen">⛶</button>
 
   <div id="stats">
     <span id="fps"></span> • 
@@ -253,10 +353,10 @@
           </select>
         </label>
         <label>
-          <span>Format:</span>
-          <select id="capFormat" name="capFormat">
-            <option value="jpg">Lossy (JPG)</option>
-            <option value="png">Lossless (PNG)</option>
+          <span>Codec:</span>
+          <select id="capCodec" name="capCodec">
+            <option value="mjpeg">MJPEG (Fast Lossy)</option>
+            <option value="png">PNG (Lossless Slow)</option>
           </select>
         </label>
       </details>
@@ -266,6 +366,12 @@
         <input type="number" id="maxFramesBuffered" name="maxFramesBuffered" min="0" max="300">
       </label>
     </form>
+  </dialog>
+
+  <dialog id="viewersDialog">
+    <button id="viewersCloseButton" type="button">✖</button>
+    <div class="title">Viewers</div>
+    <div id="viewersContent"></div>
   </dialog>
 
   <script>
@@ -286,6 +392,14 @@
     const settingsDialog = document.getElementById('settingsDialog');
     const settingsForm = document.getElementById('settingsForm');
     const closeButton = document.getElementById('closeButton');
+    const fullscreenButton = document.getElementById('fullscreenButton');
+
+    // Viewers UI
+    const viewerButton = document.getElementById('viewerButton');
+    const viewerCountSpan = document.getElementById('viewerCount');
+    const viewersDialog = document.getElementById('viewersDialog');
+    const viewersCloseButton = document.getElementById('viewersCloseButton');
+    const viewersContent = document.getElementById('viewersContent');
 
     if (!videoCanvas || !frameCtx) {
       console.error("Canvas element or context not found!");
@@ -309,6 +423,9 @@
     let frameCount = 0;
     let lastStatsTime = performance.now();
     const statsRefreshRate = 2000; // Update stats every 2 seconds
+
+    // Viewer stats state
+    let viewerStats = { count: 0, viewers: [] };
 
     function connectWebSocket() {
       if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
@@ -344,8 +461,11 @@
         } else {
           try {
             const data = JSON.parse(event.data);
-            console.log("Received non-binary (likely JSON) message:", data);
-            status("Received non-binary (likely JSON) message:\n"+ data, 30);
+            if (data && data.type === 'viewerStats') {
+              handleViewerStats(data);
+            } else {
+              console.log("Received non-binary (likely JSON) message:", data);
+            }
           } catch (err) {
             console.warn("Received unexpected non-binary, non-JSON message:", err, event.data);
             status("Received unexpected non-binary, non-JSON message:\n" + err + "\n" + event.data, 30);
@@ -577,7 +697,7 @@
         captureSettings: {
           resolution: capResolution.value,
           fps: parseInt(capFps.value),
-          format: capFormat.value,
+          codec: capCodec.value,
           frameSkip: parseInt(capFrameSkip.value),
         }
       };
@@ -629,11 +749,82 @@
       resolution.value = streamSettings.resolution.join(',');
       capResolution.value = captureSettings.resolution;
       capFps.value  = captureSettings.fps;
-      capFormat.value  = captureSettings.format;
+      capCodec.value  = captureSettings.codec;
       capFrameSkip.value  = captureSettings.frameSkip;
     }
 
     fetchCurrentSettings();
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    }
+
+    fullscreenButton.addEventListener('click', () => {
+      toggleFullscreen();
+    });
+
+    function handleViewerStats(data) {
+      const count = typeof data.count === 'number' ? data.count : (Array.isArray(data.viewers) ? data.viewers.length : 0);
+      const viewers = Array.isArray(data.viewers) ? data.viewers : [];
+      viewerStats = { count, viewers };
+      viewerCountSpan.textContent = count;
+      if (viewersDialog.open) {
+        renderViewers();
+      }
+    }
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function renderViewers() {
+      const { count, viewers } = viewerStats;
+      if (!viewers || viewers.length === 0) {
+        viewersContent.innerHTML = '<p>No viewer info received yet.</p>';
+        return;
+      }
+      let html = `<p>Total viewers: ${count}</p><ul>`;
+      viewers.forEach((v, i) => {
+        const ip = escapeHtml(v.ip || v.address || v.host || 'unknown');
+        const device = escapeHtml(v.device || v.ua || v.userAgent || '');
+        html += '<li>';
+        html += `<strong>${i + 1}.</strong> ${ip}`;
+        if (device) {
+          html += ` &mdash; ${device}`;
+        }
+        html += `<br><code>${escapeHtml(JSON.stringify(v))}</code>`;
+        html += '</li>';
+      });
+      html += '</ul>';
+      viewersContent.innerHTML = html;
+    }
+
+    viewerButton.addEventListener('click', () => {
+      renderViewers();
+      if (!viewersDialog.open) {
+        viewersDialog.showModal ? viewersDialog.showModal() : viewersDialog.show();
+      } else {
+        viewersDialog.close();
+      }
+    });
+
+    viewersCloseButton.addEventListener('click', () => {
+      viewersDialog.close();
+    });
   </script>
 </body>
 
