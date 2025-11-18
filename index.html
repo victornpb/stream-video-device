@@ -36,7 +36,6 @@
     canvas {
       display: block;
       background-color: #000;
-      /* border: 1px solid #555; */
       transition: width 0.3s, height 0.3s;
       cursor: zoom-in;
     }
@@ -64,82 +63,43 @@
       transform: translateX(-50%);
     }
 
-    #settingsButton {
-      position: absolute;
-      bottom: 10px;
-      right: 50px;
-      padding: 8px 12px;
-      background: #292828;
-      color: #fff;
-      border: none;
-      border-radius: 1px;
-      cursor: pointer;
-      z-index: 1;
-    }
-
-    #fullscreenButton {
+    #toolbar {
       position: absolute;
       bottom: 10px;
       right: 10px;
-      padding: 8px 12px;
-      background: #292828;
-      color: #fff;
-      border: none;
-      border-radius: 1px;
-      cursor: pointer;
-      z-index: 1;
-    }
-
-    #viewerButton {
-      position: absolute;
-      bottom: 10px;
-      right: 90px;
-      padding: 8px 12px;
-      background: #292828;
-      color: #fff;
-      border: none;
-      border-radius: 1px;
-      cursor: pointer;
-      z-index: 1;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 12px;
-    }
-
-    #viewerButton span {
-      min-width: 1.5em;
+      width: 180px;
       text-align: right;
+    }
+    #toolbar button {
+      display: inline-block;
+      padding: 8px 12px;
+      background: #2928288c;
+      color: #fff;
+      border: none;
+      border-radius: 1px;
+      cursor: pointer;
+      z-index: 1;
     }
 
     #settingsDialog {
-      border: 1px solid #444;
-      background: rgba(8, 8, 8, 0.6);
-      color: #eee;
-      padding: 20px;
-      min-width: 300px;
-      max-width: 90%;
       position: fixed;
       top: unset;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
+      left: unset;
+      bottom: 50px;
+      right: 20px;
       margin: 0;
+      padding: 20px;
+      min-width: 320px;
+      max-width: 90%;
+      max-height: 80vh;
+      border: 1px solid #444;
+      background: rgba(8, 8, 8, 0.65);
+      color: #eee;
+      overflow: auto;
     }
 
     #settingsDialog::backdrop {
-      /* background: rgba(0, 0, 0, 0.25); */
-    }
-    
-    #settingsDialog .title {
-      text-align: center;
-      margin-bottom: 15px;
-      font-weight: bold;
-    }
-    
-    #settingsDialog hr {
-      width: 100%;
-      opacity: 0.2;
+      background: rgba(0, 0, 0, 0.5);
     }
 
     #settingsForm {
@@ -148,22 +108,49 @@
       -gap: 10px;
     }
 
-    #settingsForm summary {
+    #viewersDialog {
+      position: fixed;
+      top: unset;
+      left: unset;
+      bottom: 50px;
+      right: 20px;
+      margin: 0;
+      padding: 20px;
+      min-width: 320px;
+      max-width: 90%;
+      max-height: 80vh;
+      border: 1px solid #444;
+      background: rgba(8, 8, 8, 0.65);
+      color: #eee;
+      overflow: auto;
+    }
+
+    #viewersDialog::backdrop {
+      background: rgba(0, 0, 0, 0.5);
+    }
+
+    dialog .title {
+      text-align: center;
+      margin-bottom: 15px;
+      font-weight: bold;
+    }
+
+    dialog summary {
       font-size: 1.2em;
       margin-bottom: 5px;
       cursor: pointer;
     }
 
-    #settingsForm label {
+    dialog label {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 0.2em;
     }
 
-    #settingsForm input[type="number"],
-    #settingsForm input[type="text"],
-    #settingsForm select {
+    dialog input[type="number"],
+    dialog input[type="text"],
+    dialog select {
       background: #333;
       border: 1px solid #555;
       color: #eee;
@@ -172,11 +159,11 @@
       border-radius: 4px;
     }
 
-    #settingsForm input[type="checkbox"] {
+    dialog input[type="checkbox"] {
       margin-left: 10px;
     }
 
-    #closeButton {
+    dialog .close {
       position: absolute;
       top: 5px;
       right: 5px;
@@ -190,66 +177,26 @@
       background: #dc354533;
     }
 
-    #closeButton:hover {
+    dialog .close:hover {
       background: #dc3545;
     }
 
-    #viewersDialog {
-      border: 1px solid #444;
-      background: rgba(8, 8, 8, 0.9);
-      color: #eee;
-      padding: 20px;
-      min-width: 320px;
-      max-width: 90%;
-      max-height: 80vh;
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      margin: 0;
-      overflow: auto;
-    }
-
-    #viewersDialog .title {
-      text-align: center;
-      margin-bottom: 15px;
-      font-weight: bold;
-    }
-
-    #viewersCloseButton {
-      position: absolute;
-      top: 5px;
-      right: 5px;
-      background: transparent;
-      border: none;
-      color: #fff;
-      font-size: 22px;
-      cursor: pointer;
-      padding: 8px;
-      line-height: 1;
-      background: #dc354533;
-    }
-
-    #viewersCloseButton:hover {
-      background: #dc3545;
-    }
-
-    #viewersContent ul {
+    dialog ul {
       list-style: none;
       padding-left: 0;
       margin: 0;
     }
 
-    #viewersContent li {
+    dialog li {
       margin-bottom: 8px;
       padding-bottom: 6px;
       border-bottom: 1px solid #333;
       font-size: 11px;
     }
 
-    #viewersContent code {
+    dialog code {
       font-size: 10px;
-      background: #222;
+      color: #666;
       padding: 4px 6px;
       border-radius: 3px;
       display: block;
@@ -260,9 +207,11 @@
 </head>
 
 <body>
-  <button id="viewerButton" title="Viewers">👁 <span id="viewerCount">0</span></button>
-  <button id="settingsButton" title="Settings">⚙️</button>
-  <button id="fullscreenButton" title="Fullscreen">⛶</button>
+  <div id="toolbar">
+    <button id="viewerButton" title="Viewers">👁 <span id="viewerCount">0</span></button>
+    <button id="settingsButton" title="Settings">⚙️</button>
+    <button id="fullscreenButton" title="Fullscreen">⛶</button>
+  </div>
 
   <div id="stats">
     <span id="fps"></span> • 
@@ -276,14 +225,14 @@
   <div id="status">(Not loaded)</div>
 
   <dialog id="settingsDialog">
-    <button id="closeButton" type="button">✖</button>
+    <button id="closeButton" class="close" type="button">✖</button>
     <div class="title">Settings</div>
     <form id="settingsForm" method="dialog">
       <details open>
-        <summary>Video compression</summary>
+        <summary>Frame compression</summary>
         <label>
-          <span>Enable compression</span>
           <input type="checkbox" id="reencode" name="reencode">
+          <span>Enable compression</span>
         </label>
         <label>
           <span>Resolution:</span>
@@ -369,7 +318,7 @@
   </dialog>
 
   <dialog id="viewersDialog">
-    <button id="viewersCloseButton" type="button">✖</button>
+    <button id="viewersCloseButton" class="close" type="button">✖</button>
     <div class="title">Viewers</div>
     <div id="viewersContent"></div>
   </dialog>
@@ -380,26 +329,25 @@
     let reconnectTimeout = null;
 
     const statusDiv = document.querySelector('#status');
-    const videoCanvas = document.getElementById('videoCanvas');
-    const scaleModeStatus = document.getElementById('scaleModeStatus');
+    const videoCanvas = document.querySelector('#videoCanvas');
+    const scaleModeStatus = document.querySelector('#scaleModeStatus');
     const frameCtx = videoCanvas ? videoCanvas.getContext('2d') : null;
-    const fpsDiv = document.getElementById('fps');
-    const bitrateDiv = document.getElementById('bitrate');
-    const framesizeDiv = document.getElementById('avgframesize');
+    const fpsDiv = document.querySelector('#fps');
+    const bitrateDiv = document.querySelector('#bitrate');
+    const framesizeDiv = document.querySelector('#avgframesize');
 
-    // Dialog elements
-    const settingsButton = document.getElementById('settingsButton');
-    const settingsDialog = document.getElementById('settingsDialog');
-    const settingsForm = document.getElementById('settingsForm');
-    const closeButton = document.getElementById('closeButton');
-    const fullscreenButton = document.getElementById('fullscreenButton');
-
-    // Viewers UI
-    const viewerButton = document.getElementById('viewerButton');
-    const viewerCountSpan = document.getElementById('viewerCount');
-    const viewersDialog = document.getElementById('viewersDialog');
-    const viewersCloseButton = document.getElementById('viewersCloseButton');
-    const viewersContent = document.getElementById('viewersContent');
+    
+    // UI elements
+    const fullscreenButton = document.querySelector('#fullscreenButton');
+    const settingsButton = document.querySelector('#settingsButton');
+    const settingsDialog = document.querySelector('#settingsDialog');
+    const settingsForm = document.querySelector('#settingsDialog form');
+    const settingsCloseButton = document.querySelector('#settingsDialog .close');
+    const viewerButton = document.querySelector('#viewerButton');
+    const viewerCountSpan = document.querySelector('#viewerCount');
+    const viewersDialog = document.querySelector('#viewersDialog');
+    const viewersCloseButton = document.querySelector('#viewersDialog .close');
+    const viewersContent = document.querySelector('#viewersContent');
 
     if (!videoCanvas || !frameCtx) {
       console.error("Canvas element or context not found!");
@@ -425,7 +373,7 @@
     const statsRefreshRate = 2000; // Update stats every 2 seconds
 
     // Viewer stats state
-    let viewerStats = { count: 0, viewers: [] };
+    let viewerStats;
 
     function connectWebSocket() {
       if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
@@ -524,7 +472,7 @@
     }
 
 
-    // save bandwidth by pausing the connection when the tab is not visible
+    // save bandwidth by only keeping connection when the tab is visible
     if (document.visibilityState === 'visible') {
       connectWebSocket();
     } else {
@@ -678,7 +626,7 @@
       settingsDialog.open ? settingsDialog.close() : settingsDialog.show();
     });
 
-    closeButton.addEventListener('click', () => {
+    settingsCloseButton.addEventListener('click', () => {
       settingsDialog.close();
     });
 
@@ -755,6 +703,44 @@
 
     fetchCurrentSettings();
 
+
+    function handleViewerStats(data) {
+      const count = typeof data.count === 'number' ? data.count : (Array.isArray(data.viewers) ? data.viewers.length : 0);
+      const viewers = Array.isArray(data.viewers) ? data.viewers : [];
+      viewerStats = { count, viewers };
+      viewerCountSpan.textContent = count;
+      if (viewersDialog.open) {
+        renderViewers();
+      }
+    }
+
+    function renderViewers() {
+      if (!viewerStats) {
+        viewersContent.innerHTML = '<p>No viewer info received yet.</p>';
+        return;
+      }
+      let html = `<p>Total viewers: ${viewerStats.count}</p><ol>`;
+      viewerStats.viewers.forEach((viewer, i) => {
+        html += `
+          <li><strong>${viewer.name || 'Viewer'}</strong> &mdash; <small>${viewer.detail || 'Unknown viewer'}</small>
+            <code>${escapeHtml(JSON.stringify(viewer.info))}</code>
+          </li>`;
+      });
+      html += '</ol>';
+      viewersContent.innerHTML = html;
+    }
+
+    viewerButton.addEventListener('click', () => {
+      viewersDialog.open ? viewersDialog.close() : viewersDialog.show();
+      renderViewers();
+
+    });
+
+    viewersCloseButton.addEventListener('click', () => {
+      viewersDialog.close();
+    });
+
+
     function toggleFullscreen() {
       if (!document.fullscreenElement) {
         if (document.documentElement.requestFullscreen) {
@@ -771,18 +757,11 @@
       toggleFullscreen();
     });
 
-    function handleViewerStats(data) {
-      const count = typeof data.count === 'number' ? data.count : (Array.isArray(data.viewers) ? data.viewers.length : 0);
-      const viewers = Array.isArray(data.viewers) ? data.viewers : [];
-      viewerStats = { count, viewers };
-      viewerCountSpan.textContent = count;
-      if (viewersDialog.open) {
-        renderViewers();
-      }
-    }
+
+
 
     function escapeHtml(str) {
-      if (str === null || str === undefined) return '';
+      if (!str === null || str === undefined) return '';
       return String(str)
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -790,36 +769,6 @@
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
     }
-
-    function renderViewers() {
-      const { count, viewers } = viewerStats;
-      if (!viewers || viewers.length === 0) {
-        viewersContent.innerHTML = '<p>No viewer info received yet.</p>';
-        return;
-      }
-      let html = `<p>Total viewers: ${count}</p><ol>`;
-      viewers.forEach((viewer, i) => {
-        html += `
-          <li><strong>${viewer.name || 'Viewer'}</strong> &mdash; <small>${viewer.detail || 'Unknown viewer'}</small>
-            <code>${escapeHtml(JSON.stringify(viewer.info))}</code>
-          </li>`;
-      });
-      html += '</ol>';
-      viewersContent.innerHTML = html;
-    }
-
-    viewerButton.addEventListener('click', () => {
-      renderViewers();
-      if (!viewersDialog.open) {
-        viewersDialog.showModal ? viewersDialog.showModal() : viewersDialog.show();
-      } else {
-        viewersDialog.close();
-      }
-    });
-
-    viewersCloseButton.addEventListener('click', () => {
-      viewersDialog.close();
-    });
   </script>
 </body>
 
