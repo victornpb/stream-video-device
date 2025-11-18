@@ -338,6 +338,7 @@ const viewerInfoMap = new Map();    // ws -> info
 wss.on('connection', (ws, req) => {
   connectedClients.add(ws);
 
+  const id = randomId();
   const forwardedFor = (req.headers['x-forwarded-for'] || '').toString().split(',')[0].trim();
   const ip = forwardedFor || req.socket.remoteAddress || '';
   const ua = req.headers['user-agent'] || '';
@@ -345,6 +346,7 @@ wss.on('connection', (ws, req) => {
   const acceptLanguage = req.headers['accept-language'] || '';
 
   const viewerInfo = {
+    id: id,
     ip,
     userAgent: ua,
     path: req.url || '/',
@@ -353,23 +355,23 @@ wss.on('connection', (ws, req) => {
       'accept-language': acceptLanguage,
       ...req.headers, // might contain sensitive data like tokens
     },
-    connectedAt: new Date(),
+    date: new Date(),
   };
 
   viewerInfoMap.set(ws, viewerInfo);
 
   console.log(dedent(`
-    ${timestamp()} Client connected! IP: ${ip}
+    ${timestamp()} Client connected! ID:${id} IP: ${ip}
       ${ua}
       Viewers: ${connectedClients.size}`));
 
-    broadcastViewerStats();
+  broadcastViewerStats();
 
   ws.on('close', () => {
     connectedClients.delete(ws);
     viewerInfoMap.delete(ws);
     console.log(dedent(`
-      ${timestamp()} Client disconnected! IP: ${ip}
+      ${timestamp()} Client disconnected! ID:${id} IP: ${ip}
         ${ua}
         Viewers: ${connectedClients.size}`));
     
@@ -425,18 +427,23 @@ function broadcastMetadata(data) {
 
 function broadcastViewerStats() {
   const viewers = [];
-  for (const [ws, info] of viewerInfoMap.entries()) {
+  for (const [ws, viewer] of viewerInfoMap.entries()) {
+
+    // only expose non sensitive info
     viewers.push({
-      ip: info.ip,
-      device: info.userAgent,
-      connectedAt: info.connectedAt,
-      path: info.path,
-      headers: {
-        ...info.headers,
-        'user-agent': undefined,
-      },
+      name: viewer.id,
+      detail: shortDeviceString(viewer.userAgent),
+      info: {
+        // ip: viewer.ip,
+        // device: viewer.userAgent,
+        country: viewer.headers['cf-ipcountry'],
+        connectedAt: viewer.date,
+        // path: viewer.path,
+        // headers: viewer.headers,
+      }
     });
   }
+
   broadcastMetadata({
     type: 'viewerStats',
     count: viewers.length,
@@ -487,9 +494,72 @@ function formatBytes(bytes) {
   return bytes.toFixed(2) + ' ' + units[i];
 }
 
+function randomId(len = 4) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let id = '';
+  for (let i = 0; i < len; i++) {
+    id += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return id;
+}
+
+
 function delay(ms) {
   return new Promise(r => setTimeout(r, ms));
 }
+
+
+function shortDeviceString(ua) {
+  ua = ua || '';
+  const s = ua;
+  function ver(re) {
+    const m = s.match(re);
+    if (!m || !m[1]) return '';
+    const parts = m[1].split(/[._]/);
+    return parts.slice(0, 3).join('.');
+  }
+  let os = 'Unknown OS';
+  if (/iphone|ipad|ipod/i.test(s)) {
+    const v = ver(/OS ([0-9_]+)/i);
+    os = v ? `iOS ${v}` : 'iOS';
+  } else if (/android/i.test(s)) {
+    const v = ver(/Android ([0-9.]+)/i);
+    os = v ? `Android ${v}` : 'Android';
+  } else if (/windows nt/i.test(s)) {
+    const v = ver(/Windows NT ([0-9.]+)/i);
+    if (v === '10.0') os = 'Windows 10';
+    else if (v === '6.3') os = 'Windows 8.1';
+    else if (v === '6.2') os = 'Windows 8';
+    else if (v === '6.1') os = 'Windows 7';
+    else os = v ? `Windows NT ${v}` : 'Windows';
+  } else if (/mac os x/i.test(s)) {
+    const v = ver(/Mac OS X ([0-9_]+)/i);
+    os = v ? `macOS ${v}` : 'macOS';
+  } else if (/linux/i.test(s)) {
+    os = 'Linux';
+  }
+  let browser = 'Unknown';
+  if (/edg\//i.test(s)) {
+    const v = ver(/Edg\/([0-9.]+)/i); browser = v ? `Edge ${v}` : 'Edge';
+  } else if (/opr\/|opera/i.test(s)) {
+    const v = ver(/(?:OPR|Opera)\/([0-9.]+)/i); browser = v ? `Opera ${v}` : 'Opera';
+  } else if (/firefox\//i.test(s)) {
+    const v = ver(/Firefox\/([0-9.]+)/i); browser = v ? `Firefox ${v}` : 'Firefox';
+  } else if (/chrome\//i.test(s) && !/edg\//i.test(s) && !/opr\//i.test(s)) {
+    const v = ver(/Chrome\/([0-9.]+)/i); browser = v ? `Chrome ${v}` : 'Chrome';
+  } else if (/safari\//i.test(s) && !/chrome\//i.test(s)) {
+    const v = ver(/Version\/([0-9.]+)/i); browser = v ? `Safari ${v}` : 'Safari';
+  }
+  let device = '';
+  if (/iphone/i.test(s)) device = 'iPhone';
+  else if (/ipad/i.test(s)) device = 'iPad';
+  else if (/ipod/i.test(s)) device = 'iPod';
+  else if (/android/i.test(s) && /mobile/i.test(s)) device = 'Android Phone';
+  else if (/android/i.test(s)) device = 'Android';
+  const left = device || os;
+  return `${left} · ${browser}`;
+}
+
 
 
 main();

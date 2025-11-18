@@ -797,19 +797,14 @@
         viewersContent.innerHTML = '<p>No viewer info received yet.</p>';
         return;
       }
-      let html = `<p>Total viewers: ${count}</p><ul>`;
-      viewers.forEach((v, i) => {
-        const ip = escapeHtml(v.ip || v.address || v.host || 'unknown');
-        const device = escapeHtml(v.device || v.ua || v.userAgent || '');
-        html += '<li>';
-        html += `<strong>${i + 1}.</strong> ${ip}`;
-        if (device) {
-          html += ` &mdash; ${device}`;
-        }
-        html += `<br><code>${escapeHtml(JSON.stringify(v))}</code>`;
-        html += '</li>';
+      let html = `<p>Total viewers: ${count}</p><ol>`;
+      viewers.forEach((viewer, i) => {
+        html += `
+          <li><strong>${viewer.name || 'Viewer'}</strong> &mdash; <small>${viewer.detail || 'Unknown viewer'}</small>
+            <code>${escapeHtml(JSON.stringify(viewer.info))}</code>
+          </li>`;
       });
-      html += '</ul>';
+      html += '</ol>';
       viewersContent.innerHTML = html;
     }
 
