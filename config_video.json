@@ -2,10 +2,10 @@
   "HTTP_PORT": 3001,
   "deviceName": "USB3 Video",
   "captureSettings": {
-    "resolution": "1280x720",
-    "fps": 60,
+    "resolution": "1920x1080",
+    "fps": 30,
     "codec": "mjpeg",
-    "frameSkip": 0
+    "frameSkip": 1
   },
   "streamSettings": {
     "maxFramesBuffered": 3,

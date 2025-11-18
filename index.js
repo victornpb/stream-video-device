@@ -503,11 +503,9 @@ function randomId(len = 4) {
   return id;
 }
 
-
 function delay(ms) {
   return new Promise(r => setTimeout(r, ms));
 }
-
 
 function shortDeviceString(ua) {
   ua = ua || '';
@@ -559,7 +557,6 @@ function shortDeviceString(ua) {
   const left = device || os;
   return `${left} · ${browser}`;
 }
-
 
 
 main();

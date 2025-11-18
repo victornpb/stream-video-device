@@ -4,6 +4,8 @@
   <meta charset="utf-8">
   <title>Video Stream</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <style>
     * {
       box-sizing: border-box;
@@ -64,11 +66,12 @@
     }
 
     #toolbar {
-      position: absolute;
+      position: fixed;
       bottom: 10px;
       right: 10px;
       width: 180px;
       text-align: right;
+      z-index: 1;
     }
     #toolbar button {
       display: inline-block;
@@ -742,13 +745,41 @@
 
 
     function toggleFullscreen() {
-      if (!document.fullscreenElement) {
-        if (document.documentElement.requestFullscreen) {
-          document.documentElement.requestFullscreen();
+      const doc = document;
+      const docEl = doc.documentElement;
+
+      if (docEl.webkitEnterFullScreen) {
+        return docEl.webkitEnterFullScreen();
+      }
+
+      const isFullscreen =
+        doc.fullscreenElement ||
+        doc.webkitFullscreenElement ||
+        doc.msFullscreenElement;
+
+      if (!isFullscreen) {
+        const request =
+          docEl.requestFullscreen ||
+          docEl.webkitRequestFullscreen ||
+          docEl.msRequestFullscreen;
+        if (request) {
+          try {
+            request.call(docEl);
+          } catch (e) {
+            console.warn('Fullscreen request failed', e);
+          }
         }
       } else {
-        if (document.exitFullscreen) {
-          document.exitFullscreen();
+        const exit =
+          doc.exitFullscreen ||
+          doc.webkitExitFullscreen ||
+          doc.msExitFullscreen;
+        if (exit) {
+          try {
+            exit.call(doc);
+          } catch (e) {
+            console.warn('Exit fullscreen failed', e);
+          }
         }
       }
     }
