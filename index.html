@@ -98,7 +98,7 @@
       text-rendering: optimizeSpeed;
       -webkit-font-smoothing: none;
       color: var(--muted);
-      padding: 1px 5px;
+      padding: 1px 16px;
       border-top-right-radius: 3px;
       background: var(--stats-bg);
       -border: 1px solid var(--border-subtle);
@@ -428,10 +428,14 @@
             <option value="30">30</option>
             <option value="24">24</option>
             <option value="20">20</option>
-            <option value="14">15</option>
+            <option value="15">15</option>
             <option value="10">10</option>
             <option value="5">5</option>
           </select>
+        </label>
+        <label>
+          <span>Capture compression (1-31):</span>
+          <input type="number" id="capQv" name="capQv" min="1" max="31" step="1">
         </label>
         <label>
           <span>Frame skip:</span>
@@ -517,7 +521,7 @@
     let totalBytes = 0;
     let frameCount = 0;
     let lastStatsTime = performance.now();
-    const statsRefreshRate = 2000; // Update stats every 2 seconds
+    const statsRefreshRate = 1000; // Update stats every 2 seconds
 
     // Viewer stats state
     let viewerStats;
@@ -799,6 +803,8 @@
 
     settingsForm.addEventListener('change', async (e) => {
       const [width, height] = document.getElementById('resolution').value.split(',').map(Number);
+      const qvRaw = document.getElementById('capQv').value.trim();
+      const qvParsed = qvRaw === '' ? undefined : parseInt(qvRaw, 10);
 
       const settings = {
         streamSettings: {
@@ -814,6 +820,7 @@
           fps: parseInt(capFps.value),
           codec: capCodec.value,
           frameSkip: parseInt(capFrameSkip.value),
+          qv: qvParsed
         }
       };
 
@@ -866,6 +873,7 @@
       capFps.value  = captureSettings.fps;
       capCodec.value  = captureSettings.codec;
       capFrameSkip.value  = captureSettings.frameSkip;
+      capQv.value = captureSettings.qv != null ? captureSettings.qv : '';
     }
 
     fetchCurrentSettings();

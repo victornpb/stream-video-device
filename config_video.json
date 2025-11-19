@@ -3,19 +3,20 @@
   "deviceName": "USB3 Video",
   "captureSettings": {
     "resolution": "1920x1080",
-    "fps": 30,
+    "fps": 60,
     "codec": "mjpeg",
-    "frameSkip": 1
+    "frameSkip": 0,
+    "qv": 3
   },
   "streamSettings": {
-    "maxFramesBuffered": 3,
+    "maxFramesBuffered": 0,
     "reencode": true,
     "format": "jpg",
-    "quality": 30,
+    "quality": 16,
     "effort": 0,
     "resolution": [
-      0,
-      0
+      1920,
+      1080
     ]
   }
 }

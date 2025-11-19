@@ -121,6 +121,7 @@ async function startContinuousFrameCapture(deviceName) {
   // sanitize input
   captureSettings.resolution = sanitize(captureSettings.resolution, /^(\d{1,4})x(\d{1,4})$/);
   captureSettings.fps = sanitize(captureSettings.fps, /^\d{1,3}$/);
+  captureSettings.qv = sanitize(captureSettings.qv, /^\d{1,2}$/);
 
   const os = process.platform;
   const ffmpegArgs = [];
@@ -135,8 +136,8 @@ async function startContinuousFrameCapture(deviceName) {
       '-pix_fmt', 'yuyv422', // yuyv422 yuv420p rgb24 rgb565
       '-f', 'image2pipe',
       '-vcodec', 'mjpeg',
-      '-q:v', '1', // JPEG quality (2-31, lower is better quality)
-      '-qmin', '1', // Set minimum quality to 1 for "uncompressed" jpeg
+      '-q:v', captureSettings.qv || '1', // JPEG quality (2-31, lower is better quality)
+      '-qmin', captureSettings.qv || '1', // Set minimum quality to qv for "uncompressed" jpeg
       '-'
     );
   }
@@ -305,7 +306,8 @@ const server = http.createServer(async (req, res) => {
         // Changing these require ffmpeg restart
         if (oldCaptureSettings.resolution !== captureSettings.resolution ||
           oldCaptureSettings.codec !== captureSettings.codec ||
-          oldCaptureSettings.fps !== captureSettings.fps) {
+          oldCaptureSettings.fps !== captureSettings.fps ||
+          oldCaptureSettings.qv !== captureSettings.qv) {
             console.log('Restarting capture...');
             await startContinuousFrameCapture(deviceName);
         }
