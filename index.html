@@ -11,23 +11,65 @@
       box-sizing: border-box;
     }
 
+    :root {
+      --bg: #050505;
+      --fg: #e5e5e5;
+      --muted: #9ca3af;
+
+      --border-subtle: #27272a;
+      --border: #3f3f4688;
+
+      --panel-bg: #111111;
+      --overlay-bg: rgba(0, 0, 0, 0.8);
+      --overlay-backdrop: rgba(0, 0, 0, 0.55);
+
+      --chip-bg: rgba(10, 10, 10, 0.9);
+      --status-bg: rgba(8, 8, 8, 0.95);
+      --stats-bg: rgba(8, 8, 8, 1);
+
+      --button-bg: #18181b;
+      --button-bg-hover: #27272f;
+      --button-border: #3f3f4688;
+
+      --accent: #3b82f6;
+
+      --close-bg: rgba(127, 127, 127, 0.2);
+      --close-bg-hover: #b91c1c;
+      --close-text: #fff;
+
+      --input-bg: #111827;
+      --input-border: #3f3f4688;
+      --input-focus-border: #3b82f6;
+      --input-focus-shadow: rgba(59, 130, 246, 0.6);
+
+      --code-bg: #030712;
+      --code-border: #27272f;
+
+      --radius-sm: 3px;
+      --radius-md: 5px;
+      --radius-lg: 8px;
+      --radius-dialog: 10px;
+      --radius-pill: 999px;
+    }
+
     html,
     body {
-      margin: 0px;
-      padding: 0px;
-      font-family: sans-serif;
-      background: #111;
-      color: #eee;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--fg);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       min-height: 100vh;
       width: 100%;
+      overflow: hidden;
     }
 
     #canvas-container {
-      position: relative;
+      position: absolute;
       width: 100%;
       height: 100%;
       display: flex;
@@ -37,51 +79,106 @@
 
     canvas {
       display: block;
-      background-color: #000;
+      background-color: #00F;
       transition: width 0.3s, height 0.3s;
       cursor: zoom-in;
+      border-radius: 0;
+      /*border: 1px solid var(--border-subtle);*/
+      image-rendering: crisp-edges;
+      image-rendering: pixelated;
     }
 
     #stats {
-      position: absolute;
-      bottom: 5px;
-      left: 5px;
-      width: 200px;
+      position: fixed;
+      bottom: 0px;
+      left: 0px;
+      width: auto;
       z-index: 1;
-      font-size: 8pt;
+      font-size: 10px;
       text-rendering: optimizeSpeed;
       -webkit-font-smoothing: none;
-      color: #888;
+      color: var(--muted);
+      padding: 1px 5px;
+      border-top-right-radius: 3px;
+      background: var(--stats-bg);
+      -border: 1px solid var(--border-subtle);
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+      opacity: 0.65;
+    }
+
+    #stats:hover {
+      opacity: 1;
     }
 
     #status {
+      position: fixed;
+      bottom: 5px;
       text-align: center;
-      font-size: 10pt;
-      margin-top: 10px;
-      position: absolute;
-      top: 10px;
+      font-size: 16px;
       left: 50%;
       z-index: 1;
       transform: translateX(-50%);
+      padding: 4px 10px;
+      border-radius: 16px;
+      background: var(--status-bg);
+      border: 1px solid var(--border-subtle);
+      height: auto;
+      max-width: 80vw;
+      overflow: hidden;
+      --white-space: nowrap;
+      --text-overflow: ellipsis;
+      box-shadow: 0 0 5px grey;
     }
 
     #toolbar {
       position: fixed;
-      bottom: 10px;
-      right: 10px;
-      width: 180px;
+      bottom: 5px;
+      right: 5px;
+      width: auto;
       text-align: right;
       z-index: 1;
+      display: inline-flex;
+      gap: 6px;
+      padding: 3px;
+      border-radius: var(--radius-pill);
+      background: var(--overlay-bg);
+      border: 1px solid var(--border);
     }
+
     #toolbar button {
-      display: inline-block;
-      padding: 8px 12px;
-      background: #2928288c;
-      color: #fff;
-      border: none;
-      border-radius: 1px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 10px;
+      background: var(--button-bg);
+      color: var(--fg);
+      border: 1px solid var(--button-border);
+      border-radius: var(--radius-pill);
       cursor: pointer;
       z-index: 1;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
+    }
+
+    #toolbar button span {
+      font-variant-numeric: tabular-nums;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    #toolbar button:hover {
+      background: var(--button-bg-hover);
+      border-color: var(--border);
+      transform: translateY(-1px);
+    }
+
+    #toolbar button:active {
+      transform: translateY(0);
+      opacity: 0.9;
     }
 
     #settingsDialog {
@@ -91,24 +188,25 @@
       bottom: 50px;
       right: 20px;
       margin: 0;
-      padding: 20px;
+      padding: 16px 18px;
       min-width: 320px;
       max-width: 90%;
-      max-height: 80vh;
-      border: 1px solid #444;
-      background: rgba(8, 8, 8, 0.65);
-      color: #eee;
+      max-height: calc(100svh - 60px);
+      border: 1px solid var(--border);
+      background: var(--panel-bg);
+      color: var(--fg);
       overflow: auto;
+      border-radius: var(--radius-dialog);
     }
 
     #settingsDialog::backdrop {
-      background: rgba(0, 0, 0, 0.5);
+      background: var(--overlay-backdrop);
     }
 
     #settingsForm {
       display: flex;
       flex-direction: column;
-      -gap: 10px;
+      gap: 8px;
     }
 
     #viewersDialog {
@@ -118,70 +216,96 @@
       bottom: 50px;
       right: 20px;
       margin: 0;
-      padding: 20px;
+      padding: 16px 18px;
       min-width: 320px;
       max-width: 90%;
-      max-height: 80vh;
-      border: 1px solid #444;
-      background: rgba(8, 8, 8, 0.65);
-      color: #eee;
+      max-height: calc(100svh - 60px);
+      border: 1px solid var(--border);
+      background: var(--panel-bg);
+      color: var(--fg);
       overflow: auto;
+      border-radius: var(--radius-dialog);
     }
 
     #viewersDialog::backdrop {
-      background: rgba(0, 0, 0, 0.5);
+      background: var(--overlay-backdrop);
     }
 
     dialog .title {
-      text-align: center;
-      margin-bottom: 15px;
-      font-weight: bold;
+      text-align: left;
+      margin-bottom: 10px;
+      font-weight: 600;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
     }
 
     dialog summary {
-      font-size: 1.2em;
-      margin-bottom: 5px;
+      font-size: 13px;
+      margin-bottom: 4px;
       cursor: pointer;
+      font-weight: 500;
+    }
+
+    dialog ol {
+      padding-left: 1em;
     }
 
     dialog label {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 0.2em;
+      margin-bottom: 4px;
+      font-size: 12px;
+      gap: 8px;
     }
 
     dialog input[type="number"],
     dialog input[type="text"],
     dialog select {
-      background: #333;
-      border: 1px solid #555;
-      color: #eee;
-      padding: 5px;
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      color: var(--fg);
+      padding: 4px 6px;
       width: 150px;
-      border-radius: 4px;
+      border-radius: var(--radius-md);
+      font-size: 12px;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+
+    dialog input[type="number"]:focus,
+    dialog input[type="text"]:focus,
+    dialog select:focus {
+      border-color: var(--input-focus-border);
+      box-shadow: 0 0 0 1px var(--input-focus-shadow);
+      background: #020617;
     }
 
     dialog input[type="checkbox"] {
       margin-left: 10px;
+      accent-color: var(--accent);
     }
 
     dialog .close {
       position: absolute;
-      top: 5px;
-      right: 5px;
-      background: transparent;
+      top: 6px;
+      right: 6px;
+      background: var(--close-bg);
       border: none;
-      color: #fff;
-      font-size: 22px;
+      color: var(--close-text);
+      font-size: 18px;
       cursor: pointer;
-      padding: 8px;
+      padding: 4px 7px;
       line-height: 1;
-      background: #dc354533;
+      border-radius: var(--radius-pill);
+      transition: background 0.3s ease, transform 0.3s ease;
     }
 
     dialog .close:hover {
-      background: #dc3545;
+      background: var(--close-bg-hover);
+      transform: translateY(-1px);
     }
 
     dialog ul {
@@ -193,18 +317,30 @@
     dialog li {
       margin-bottom: 8px;
       padding-bottom: 6px;
-      border-bottom: 1px solid #333;
+      border-bottom: 1px solid var(--border-subtle);
       font-size: 11px;
     }
 
     dialog code {
       font-size: 10px;
-      color: #666;
-      padding: 4px 6px;
-      border-radius: 3px;
+      color: var(--muted);
+      padding: 0 0;
+      border-radius: var(--radius-sm);
       display: block;
       white-space: pre-wrap;
       word-break: break-all;
+      margin-top: 4px;
+    }
+
+    @media (max-width: 640px) {
+      #settingsDialog,
+      #viewersDialog {
+        left: 50%;
+        right: auto;
+        bottom: 50px;
+        transform: translateX(-50%);
+        width: calc(100vw - 32px);
+      }
     }
   </style>
 </head>
@@ -589,20 +725,20 @@
       if (mode=='fit-width') {
         modeText = 'Fit Width';
         videoCanvas.setAttribute('data-zoom', 'fit-width');
-        videoCanvas.style.width = '100vw';
+        videoCanvas.style.width = '100svw';
         videoCanvas.style.height = 'auto';
       }
       else if (mode=='fit-height') {
         modeText = 'Fit Height';
         videoCanvas.setAttribute('data-zoom', 'fit-height');
         videoCanvas.style.width = 'auto';
-        videoCanvas.style.height = '100vh';
+        videoCanvas.style.height = '100svh';
       }
       else if (mode=='stretch') {
         modeText = 'Stretch to Fill';
         videoCanvas.setAttribute('data-zoom', 'stretch');
-        videoCanvas.style.width = '100vw';
-        videoCanvas.style.height = '100vh';
+        videoCanvas.style.width = '100svw';
+        videoCanvas.style.height = '100svh';
       }
       else {
         modeText = '100%';
@@ -718,15 +854,19 @@
     }
 
     function renderViewers() {
-      if (!viewerStats) {
-        viewersContent.innerHTML = '<p>No viewer info received yet.</p>';
-        return;
+      function stringifyFlat(obj) {
+        return Object.entries(obj)
+          .map(([key, value]) => `${key}: ${value}`)
+          .join('\n');
       }
+
+      if (!viewerStats) return viewersContent.innerHTML = '<p>No viewer info received yet.</p>';
       let html = `<p>Total viewers: ${viewerStats.count}</p><ol>`;
       viewerStats.viewers.forEach((viewer, i) => {
         html += `
-          <li><strong>${viewer.name || 'Viewer'}</strong> &mdash; <small>${viewer.detail || 'Unknown viewer'}</small>
-            <code>${escapeHtml(JSON.stringify(viewer.info))}</code>
+          <li>
+            <strong>${viewer.name || 'Viewer'}</strong> &mdash; ${viewer.detail || 'Unknown viewer'}
+            <code>${escapeHtml(stringifyFlat(viewer.info))}</code>
           </li>`;
       });
       html += '</ol>';
@@ -792,7 +932,7 @@
 
 
     function escapeHtml(str) {
-      if (!str === null || str === undefined) return '';
+      if (str === null || str === undefined) return '';
       return String(str)
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
