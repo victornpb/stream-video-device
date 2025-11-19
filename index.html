@@ -19,12 +19,12 @@
       --border-subtle: #27272a;
       --border: #3f3f4688;
 
-      --panel-bg: #111111;
+      --panel-bg: #111111dd;
       --overlay-bg: rgba(0, 0, 0, 0.8);
       --overlay-backdrop: rgba(0, 0, 0, 0.55);
 
       --chip-bg: rgba(10, 10, 10, 0.9);
-      --status-bg: rgba(8, 8, 8, 0.95);
+      --status-bg: rgba(8, 8, 8, 0.75);
       --stats-bg: rgba(8, 8, 8, 1);
 
       --button-bg: #18181b;
@@ -84,8 +84,8 @@
       cursor: zoom-in;
       border-radius: 0;
       /*border: 1px solid var(--border-subtle);*/
-      image-rendering: crisp-edges;
-      image-rendering: pixelated;
+      /* image-rendering: crisp-edges;
+      image-rendering: pixelated; */
     }
 
     #stats {
@@ -121,7 +121,7 @@
       z-index: 1;
       transform: translateX(-50%);
       padding: 4px 10px;
-      border-radius: 16px;
+      border-radius: 1px;
       background: var(--status-bg);
       border: 1px solid var(--border-subtle);
       height: auto;
@@ -129,7 +129,7 @@
       overflow: hidden;
       --white-space: nowrap;
       --text-overflow: ellipsis;
-      box-shadow: 0 0 5px grey;
+
     }
 
     #toolbar {
@@ -145,6 +145,10 @@
       border-radius: var(--radius-pill);
       background: var(--overlay-bg);
       border: 1px solid var(--border);
+      opacity: 0.5;
+    }
+    #toolbar:hover{
+      opacity: 1;
     }
 
     #toolbar button {
@@ -348,6 +352,7 @@
 <body>
   <div id="toolbar">
     <button id="viewerButton" title="Viewers">👁 <span id="viewerCount">0</span></button>
+    <button id="stillFrameButton" title="Snapshot frame">📸</button>
     <button id="settingsButton" title="Settings">⚙️</button>
     <button id="fullscreenButton" title="Fullscreen">⛶</button>
   </div>
@@ -471,6 +476,8 @@
     const videoCanvas = document.querySelector('#videoCanvas');
     const scaleModeStatus = document.querySelector('#scaleModeStatus');
     const frameCtx = videoCanvas ? videoCanvas.getContext('2d') : null;
+
+    const statsDiv = document.querySelector('#stats');
     const fpsDiv = document.querySelector('#fps');
     const bitrateDiv = document.querySelector('#bitrate');
     const framesizeDiv = document.querySelector('#avgframesize');
@@ -479,6 +486,7 @@
     // UI elements
     const fullscreenButton = document.querySelector('#fullscreenButton');
     const settingsButton = document.querySelector('#settingsButton');
+    const stillFrameButton = document.querySelector('#stillFrameButton');
     const settingsDialog = document.querySelector('#settingsDialog');
     const settingsForm = document.querySelector('#settingsDialog form');
     const settingsCloseButton = document.querySelector('#settingsDialog .close');
@@ -759,7 +767,14 @@
     changeZoomMode();
 
 
-    // Dialog and Settings Logic
+    statsDiv.addEventListener('click', () => {
+      statsDiv.style.opacity = statsDiv.style.opacity ? '' : 0.2;
+    });
+
+    stillFrameButton.addEventListener('click', () => {
+      window.open('/frame');
+    });
+
     settingsButton.addEventListener('click', () => {
       fetchCurrentSettings();
       settingsDialog.open ? settingsDialog.close() : settingsDialog.show();
@@ -767,6 +782,19 @@
 
     settingsCloseButton.addEventListener('click', () => {
       settingsDialog.close();
+    });
+
+    viewerButton.addEventListener('click', () => {
+      viewersDialog.open ? viewersDialog.close() : viewersDialog.show();
+      renderViewers();
+    });
+
+    viewersCloseButton.addEventListener('click', () => {
+      viewersDialog.close();
+    });
+
+    fullscreenButton.addEventListener('click', () => {
+      toggleFullscreen();
     });
 
     settingsForm.addEventListener('change', async (e) => {
@@ -873,16 +901,6 @@
       viewersContent.innerHTML = html;
     }
 
-    viewerButton.addEventListener('click', () => {
-      viewersDialog.open ? viewersDialog.close() : viewersDialog.show();
-      renderViewers();
-
-    });
-
-    viewersCloseButton.addEventListener('click', () => {
-      viewersDialog.close();
-    });
-
 
     function toggleFullscreen() {
       const doc = document;
@@ -923,13 +941,6 @@
         }
       }
     }
-
-    fullscreenButton.addEventListener('click', () => {
-      toggleFullscreen();
-    });
-
-
-
 
     function escapeHtml(str) {
       if (str === null || str === undefined) return '';
